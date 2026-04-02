@@ -198,11 +198,11 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                 visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.5 } }
               }}
             >
-              <div onClick={() => router.push(`/products/${p._id}`)} style={{ cursor: 'pointer', height: 'clamp(160px, 40vw, 280px)', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7rem', borderBottom: '1px solid #eaeaea' }}>
+              <div onClick={() => router.push(`/products/${p._id}`)} style={{ cursor: 'pointer', height: 'clamp(140px, 35vw, 220px)', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', borderBottom: '1px solid #eaeaea' }}>
                 <ProductImageCarousel images={p.images && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : [])} name={p.name} />
               </div>
-              <div style={{ padding: 'clamp(0.75rem, 3vw, 2rem)', minWidth: 0 }}>
-                <div style={{ display: 'inline-block', background: 'rgba(255, 179, 0, 0.2)', color: 'var(--color-tertiary)', padding: '0.25rem 0.75rem', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: 700, marginBottom: '1rem', textTransform: 'uppercase' }}>{p.category}</div>
+              <div style={{ padding: 'clamp(0.6rem, 2vw, 1.25rem)', minWidth: 0 }}>
+                <div style={{ display: 'inline-block', background: 'rgba(255, 179, 0, 0.2)', color: 'var(--color-tertiary)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', fontSize: '0.7rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase' }}>{p.category}</div>
                 {(() => {
                   const hasVariants = p.variants && p.variants.length > 0;
                   const allVariants = hasVariants ? [{ size: `${p.quantity || 1} ${p.unit || 'kg'}`, price: p.price }, ...p.variants!] : [{ size: `${p.quantity || 1} ${p.unit || 'kg'}`, price: p.price }];
@@ -213,24 +213,22 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
 
                   return (
                     <>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', width: '100%', marginBottom: '10px' }}>
-                        <h3 onClick={() => router.push(`/products/${p._id}`)} style={{ fontSize: 'clamp(1rem, 3vw, 1.4rem)', fontWeight: 700, color: 'var(--color-text)', textTransform: 'capitalize', cursor: 'pointer', margin: 0, flex: 1, minWidth: 0 }}>{p.name}</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', width: '100%', marginBottom: '10px' }}>
+                        <h3 onClick={() => router.push(`/products/${p._id}`)} style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)', fontWeight: 700, color: 'var(--color-text)', textTransform: 'capitalize', cursor: 'pointer', margin: 0, width: '100%', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>{p.name}</h3>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flexShrink: 0, width: '100%' }}>
                           {p.discount && p.discount > 0 ? (
-                            <>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85rem' }}>₹{currentBasePrice}</span>
-                                <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: 800, background: '#dcfce7', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>{p.discount}% OFF</span>
-                              </div>
-                              <span style={{ fontSize: 'clamp(1rem, 3vw, 1.8rem)', color: p.inStock === false ? '#94a3b8' : 'var(--color-primary-dark)', fontWeight: 800, lineHeight: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                              <span style={{ fontSize: 'clamp(1.1rem, 3vw, 1.4rem)', color: p.inStock === false ? '#94a3b8' : 'var(--color-primary-dark)', fontWeight: 800, lineHeight: 1 }}>
                                 ₹{currentFinalPrice}
                               </span>
-                            </>
+                              <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85rem' }}>₹{currentBasePrice}</span>
+                              <span style={{ color: '#22c55e', fontSize: 'clamp(0.6rem, 2vw, 0.75rem)', fontWeight: 800, background: '#dcfce7', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}>{p.discount}% OFF</span>
+                            </div>
                           ) : (
-                            <span style={{ fontSize: 'clamp(1rem, 3vw, 1.8rem)', fontWeight: 800, color: p.inStock === false ? '#94a3b8' : 'inherit', lineHeight: 1 }}>₹{currentBasePrice}</span>
+                            <span style={{ fontSize: 'clamp(1.1rem, 3vw, 1.4rem)', fontWeight: 800, color: p.inStock === false ? '#94a3b8' : 'inherit', lineHeight: 1 }}>₹{currentBasePrice}</span>
                           )}
-                          <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>(Incl. of all taxes)</div>
+                          <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>(Incl. of all taxes)</div>
                         </div>
                       </div>
 
