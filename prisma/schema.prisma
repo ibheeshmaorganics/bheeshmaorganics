@@ -23,9 +23,9 @@ model Product {
   quantity    Float
   unit        String
   images      String[]
-  variants    Json?
   inStock     Boolean  @default(true)
   createdAt   DateTime @default(now())
+  variants    Json?
 }
 
 model Order {
@@ -37,12 +37,12 @@ model Order {
   products          Json
   totalAmount       Float
   status            String   @default("Pending")
-  paymentStatus     String   @default("payment processing/pending")
-  paymentMethod     String   @default("Cash")
   paymentId         String?
   shiprocketOrderId String?
   awbCode           String?
+  createdAt         DateTime @default(now())
+  paymentMethod     String   @default("Cash")
   courierName       String?
   trackingLink      String?
-  createdAt         DateTime @default(now())
+  paymentStatus     String   @default("payment processing/pending")
 }

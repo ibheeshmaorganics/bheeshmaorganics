@@ -302,8 +302,9 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
   };
 
   // Analytics Metrics
-  const totalRevenue = orders.reduce((acc, curr) => acc + (curr.status !== 'Cancelled' ? curr.totalAmount : 0), 0);
-  const pendingOrders = orders.filter(o => o.status === 'Pending').length;
+  const validOrdersForMetrics = orders.filter(o => o.paymentStatus !== 'payment failed');
+  const totalRevenue = validOrdersForMetrics.reduce((acc, curr) => acc + (curr.status !== 'Cancelled' ? curr.totalAmount : 0), 0);
+  const pendingOrders = validOrdersForMetrics.filter(o => o.status === 'Pending').length;
 
   const fadeAnim = {
     hidden: { opacity: 0, y: 15 },
@@ -350,20 +351,20 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
               const last30d = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
 
               const filterData = (dateLimit: Date) => {
-                const filtered = orders.filter(o => new Date(o.createdAt) >= dateLimit);
-                return { count: filtered.length, revenue: filtered.reduce((acc, o) => acc + (o.totalAmount || 0), 0) };
+                const filtered = validOrdersForMetrics.filter(o => new Date(o.createdAt) >= dateLimit);
+                return { count: filtered.length, revenue: filtered.reduce((acc, o) => acc + (o.status !== 'Cancelled' ? (o.totalAmount || 0) : 0), 0) };
               };
 
               const d24h = filterData(last24h);
               const d7d = filterData(last7d);
               const d30d = filterData(last30d);
-              const dAll = { count: orders.length, revenue: orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0) };
+              const dAll = filterData(new Date(0));
 
               const aov = dAll.count > 0 ? Math.round(dAll.revenue / dAll.count) : 0;
-              const pendingCount = orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length;
-              const deliveredCount = orders.filter(o => o.status === 'Delivered').length;
-              const shippedCount = orders.filter(o => o.status === 'Shipped').length;
-              const onlineCount = orders.filter(o => o.paymentMethod === 'Razorpay').length;
+              const pendingCount = validOrdersForMetrics.filter(o => o.status === 'Pending' || o.status === 'Processing').length;
+              const deliveredCount = validOrdersForMetrics.filter(o => o.status === 'Delivered').length;
+              const shippedCount = validOrdersForMetrics.filter(o => o.status === 'Shipped').length;
+              const onlineCount = validOrdersForMetrics.filter(o => o.paymentMethod === 'Razorpay').length;
               const codCount = dAll.count - onlineCount;
               const outOfStock = products.filter(p => p.inStock === false).length;
 
@@ -549,6 +550,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                   </div>
                 ) : (() => {
                   const filteredOrders = orders.filter(o => {
+                    if (o.paymentStatus === 'draft_intent') return false;
                     const searchLower = orderSearch.toLowerCase();
                     const dateString = new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase();
                     return o._id.toLowerCase().includes(searchLower) ||
@@ -619,18 +621,16 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                                 </td>
                                 <td>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <select
-                                      className={styles.statusSelect}
-                                      value={o.status}
-                                      onChange={(e) => handleUpdateOrderStatus(o._id, e.target.value)}
-                                      style={{ padding: '6px' }}
-                                    >
-                                      <option value="Pending">Pending</option>
-                                      <option value="Processing">Processing</option>
-                                      <option value="Shipped">Shipped</option>
-                                      <option value="Delivered">Delivered</option>
-                                      <option value="Cancelled">Cancelled</option>
-                                    </select>
+                                    <span style={{ 
+                                      fontWeight: 600, 
+                                      padding: '4px 8px', 
+                                      borderRadius: '6px', 
+                                      background: o.status === 'Delivered' ? '#dcfce7' : o.status === 'Cancelled' ? '#fee2e2' : o.status === 'Shipped' ? '#dbeafe' : '#fef3c7',
+                                      color: o.status === 'Delivered' ? '#166534' : o.status === 'Cancelled' ? '#991b1b' : o.status === 'Shipped' ? '#1e40af' : '#92400e',
+                                      fontSize: '0.85rem'
+                                    }}>
+                                      {o.status}
+                                    </span>
                                     <button className={styles.adminWhiteBtn} style={{ padding: '6px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap' }} onClick={() => { setEditingOrder(o); setIsEditingOrder(true); }}>
                                       View / Edit Details
                                     </button>
