@@ -114,7 +114,9 @@
   }
 
   .logo {
-    font-size: 1.15rem;
+    font-size: 1.38rem;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .actionArea {

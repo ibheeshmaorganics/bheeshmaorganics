@@ -241,12 +241,12 @@ export default function ClientProductView({ product }: { product: any }) {
           flex-wrap: wrap;
         }
         .bo-variantPill {
-          padding: 14px 28px;
-          border-radius: 12px;
+          padding: 10px 20px;
+          border-radius: 10px;
           cursor: pointer;
           border: 2px solid #e2e8f0;
-          font-weight: 800;
-          font-size: 1.15rem;
+          font-weight: 700;
+          font-size: 0.95rem;
           background: white;
           transition: all 0.2s ease;
           color: #475569;
@@ -354,7 +354,10 @@ export default function ClientProductView({ product }: { product: any }) {
             top: 0;
           }
           .bo-title {
-            font-size: 2.2rem;
+            font-size: 1.6rem;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            max-width: 100%;
           }
           .bo-priceBlock {
             padding: 15px;

@@ -155,7 +155,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 800, marginBottom: '1rem', color: 'white', letterSpacing: '-1px' }}>Premium Wellness Collection</h1>
+          <h1 style={{ fontSize: 'clamp(1.4rem, 6vw, 3.5rem)', fontWeight: 800, marginBottom: '1rem', color: 'white', letterSpacing: '-1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Premium Wellness Collection</h1>
           <p style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)', color: 'rgba(255, 255, 255, 0.85)', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>Carefully crafted from pure Himalayan sourcing and traditional medicinal wisdom to support your daily holistic health.</p>
         </motion.div>
       </div>
@@ -261,7 +261,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                             View More
                           </Link>
 
-                          <div style={{ flex: 1, display: 'flex' }}>
+                          <div style={{ flex: 1.15, display: 'flex' }}>
                             {(() => {
                               const cartItem = cart.find(c => c._id === activeCartId);
                               if (p.inStock === false) {
