@@ -12,7 +12,7 @@
 
 .scrolled {
   background-color: #ffffff;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   border-bottom-color: transparent;
   padding: 0.25rem 0;
 }
@@ -112,7 +112,21 @@
   .navLinks {
     display: none;
   }
-  .trackInput {
-    width: 110px;
+
+  .logo {
+    font-size: 1.15rem;
+  }
+
+  .actionArea {
+    gap: 0.5rem;
+  }
+
+  .orderStatusBtn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .cartIcon {
+    padding: 0.3rem;
   }
 }

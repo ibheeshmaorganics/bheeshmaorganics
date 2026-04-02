@@ -230,6 +230,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                           ) : (
                             <span style={{ fontSize: 'clamp(1rem, 3vw, 1.8rem)', fontWeight: 800, color: p.inStock === false ? '#94a3b8' : 'inherit', lineHeight: 1 }}>₹{currentBasePrice}</span>
                           )}
+                          <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>(Incl. of all taxes)</div>
                         </div>
                       </div>
 

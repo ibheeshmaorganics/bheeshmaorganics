@@ -31,6 +31,16 @@ export default function Footer() {
 
         <div className={styles.sideBySide}>
           <div className={styles.section}>
+            <h4 className={styles.heading}>Legal</h4>
+            <div className={styles.infoGroup}>
+              <a href="/terms-and-conditions" className={styles.info} style={{ textDecoration: 'none', color: 'inherit', display: 'block', marginBottom: '8px', transition: 'color 0.2s' }}>Terms &amp; Conditions</a>
+              <a href="/privacy-policy" className={styles.info} style={{ textDecoration: 'none', color: 'inherit', display: 'block', marginBottom: '8px', transition: 'color 0.2s' }}>Privacy Policy</a>
+              <a href="/shipping-policy" className={styles.info} style={{ textDecoration: 'none', color: 'inherit', display: 'block', marginBottom: '8px', transition: 'color 0.2s' }}>Shipping Policy</a>
+              <a href="/refund-policy" className={styles.info} style={{ textDecoration: 'none', color: 'inherit', display: 'block', transition: 'color 0.2s' }}>Refund Policy</a>
+            </div>
+          </div>
+
+          <div className={styles.section}>
             <h4 className={styles.heading}>Contact Us</h4>
             <div className={styles.infoGroup}>
               <p className={styles.info}>📞 9866846792</p>
@@ -41,15 +51,6 @@ export default function Footer() {
               <p>Vyshnavi Complex, Opp. Best Price,</p>
               <p>Mangalagiri Road, Guntur,</p>
               <p>Andhra Pradesh, 522001, India</p>
-            </div>
-          </div>
-
-          <div className={styles.section}>
-            <h4 className={styles.heading}>Business Hours</h4>
-            <div className={styles.infoGroup}>
-              <p className={styles.info}>Mon - Sat: Regular Hours</p>
-              <p className={styles.info}>Sun: Regular Hours</p>
-              <p className={styles.info}>Support: 24 Hours</p>
             </div>
           </div>
         </div>

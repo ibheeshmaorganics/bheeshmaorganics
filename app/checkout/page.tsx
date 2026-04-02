@@ -250,7 +250,10 @@ export default function CheckoutPage() {
             </div>
 
             <div className={styles.totalRow}>
-              <span>Total</span>
+              <span style={{ display: 'flex', flexDirection: 'column' }}>
+                Total
+                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500, marginTop: '2px' }}>(Incl. of all taxes)</span>
+              </span>
               <span style={{ color: 'var(--color-tertiary)' }}>₹{totalAmount}</span>
             </div>
           </div>

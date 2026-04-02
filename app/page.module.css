@@ -62,7 +62,7 @@
 }
 
 .title {
-  font-size: 4.5rem;
+  font-size: 4rem;
   font-weight: 800;
   line-height: 1.1;
   margin-bottom: 2rem;
@@ -78,7 +78,7 @@
 }
 
 .subtitle {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: rgba(255, 255, 255, 0.85);
   /* Softer white for readable contrast */
   margin-bottom: 3rem;
@@ -522,7 +522,7 @@
   }
 
   .title {
-    font-size: 3.5rem;
+    font-size: 3rem;
   }
 
   .ctaGroup {
@@ -541,7 +541,7 @@
 
 @media (max-width: 768px) {
   .title {
-    font-size: 2.8rem;
+    font-size: 2.4rem;
   }
 
   .ctaGroup {

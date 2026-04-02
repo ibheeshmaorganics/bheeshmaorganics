@@ -426,14 +426,17 @@ export default function ClientProductView({ product }: { product: any }) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: '#f8fafc', padding: 'clamp(15px, 4vw, 24px)', borderRadius: '16px', border: '1px solid #e2e8f0', marginTop: '0.5rem', boxSizing: 'border-box', maxWidth: '420px', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <span className={styles.currentPrice}>₹{currentFinalPrice}</span>
-              {product.discount && product.discount > 0 && (
-                <>
-                  <span className={styles.originalPrice}>₹{currentBasePrice}</span>
-                  <span className={styles.discountBadge}>{product.discount}% OFF</span>
-                </>
-              )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <span className={styles.currentPrice}>₹{currentFinalPrice}</span>
+                {product.discount && product.discount > 0 && (
+                  <>
+                    <span className={styles.originalPrice}>₹{currentBasePrice}</span>
+                    <span className={styles.discountBadge}>{product.discount}% OFF</span>
+                  </>
+                )}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>(Incl. of all taxes)</div>
             </div>
 
             <div className={styles.actionButtons} style={{ marginTop: '0', flexWrap: 'wrap' }}>
