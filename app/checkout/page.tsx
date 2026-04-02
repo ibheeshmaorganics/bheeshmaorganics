@@ -150,8 +150,15 @@ export default function CheckoutPage() {
           };
 
           const rzp = new (window as any).Razorpay(options);
-          rzp.on('payment.failed', function (response: any) {
+          rzp.on('payment.failed', async function (response: any) {
             toast.error('Payment Failed: ' + response.error.description);
+            try {
+               await fetch('/api/orders/failed', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ orderId: data.orderId })
+               });
+            } catch (e) {}
           });
           rzp.open();
         } else {

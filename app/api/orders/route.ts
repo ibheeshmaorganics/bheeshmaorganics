@@ -14,7 +14,10 @@ export async function GET(req: NextRequest) {
 
   try {
     jwt.verify(token, JWT_SECRET);
-    const orders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' } });
+    const orders = await prisma.order.findMany({ 
+      where: { paymentStatus: { not: 'draft_intent' } },
+      orderBy: { createdAt: 'desc' } 
+    });
     const products = await prisma.product.findMany();
 
     // Map products for quick lookup
@@ -60,7 +63,7 @@ export async function POST(req: NextRequest) {
       totalAmount: body.totalAmount,
       status: 'Pending',
       paymentMethod: body.paymentMethod || 'Cash',
-      paymentStatus: body.paymentMethod === 'Razorpay' ? 'payment processing/pending' : 'cod',
+      paymentStatus: body.paymentMethod === 'Razorpay' ? 'draft_intent' : 'cod',
     };
 
     const order = await prisma.order.create({

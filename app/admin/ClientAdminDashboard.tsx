@@ -315,7 +315,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
       {/* Sidebar Profile */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
-          <h3>Bheeshma<br />Admin Panel</h3>
+          <h3>Bheeshma Organics<br />Admin Panel</h3>
         </div>
         <nav className={styles.sidebarNav}>
           <button className={`${styles.navItem} ${activeTab === 'dashboard' ? styles.active : ''}`} onClick={() => setActiveTab('dashboard')}>

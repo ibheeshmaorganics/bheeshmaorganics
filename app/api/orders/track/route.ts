@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
     }
 
     let orders = await prisma.order.findMany({
-      where: { OR: orConditions },
+      where: { 
+        OR: orConditions,
+        paymentStatus: { not: 'draft_intent' }
+      },
       orderBy: { createdAt: 'desc' },
     });
 
