@@ -266,14 +266,14 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                               const cartItem = cart.find(c => c._id === activeCartId);
                               if (p.inStock === false) {
                                 return (
-                                  <button disabled style={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '1px solid #e2e8f0', boxShadow: 'none', width: '100%', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', whiteSpace: 'normal', lineHeight: 1.2 }}>
+                                  <button disabled style={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '2px solid #e2e8f0', boxShadow: 'none', width: '100%', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', whiteSpace: 'normal', lineHeight: 1.2 }}>
                                     Out of Stock
                                   </button>
                                 );
                               }
                               if (cartItem) {
                                 return (
-                                  <div style={{ display: 'flex', alignItems: 'stretch', background: '#f1f5f9', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '1px solid #e2e8f0', width: '100%', justifyContent: 'space-between' }}>
+                                  <div style={{ display: 'flex', alignItems: 'stretch', background: '#f1f5f9', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '2px solid #e2e8f0', width: '100%', justifyContent: 'space-between' }}>
                                     <button onClick={() => updateQuantity(activeCartId, -1)} style={{ padding: 'clamp(0.3rem, 1.5vw, 0.65rem) clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}>-</button>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
                                       <span style={{ fontWeight: 800, color: '#0f172a', textAlign: 'center', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)' }}>{cartItem.quantity}</span>
@@ -283,7 +283,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                                 );
                               }
                               return (
-                                <button onClick={() => handleAddToCart(p, vi)} style={{ width: '100%', background: 'var(--color-tertiary)', color: 'white', border: 'none', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'normal', lineHeight: 1.2 }}>
+                                <button onClick={() => handleAddToCart(p, vi)} style={{ width: '100%', background: 'var(--color-tertiary)', color: 'white', border: '2px solid var(--color-tertiary)', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'normal', lineHeight: 1.2 }}>
                                   Add to Cart
                                 </button>
                               );
