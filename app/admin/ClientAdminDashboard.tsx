@@ -293,7 +293,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
           label: 'Yes',
           onClick: async () => {
             await fetch('/api/admin/login', { method: 'DELETE' });
-            router.push('/admin/login');
+            window.location.href = '/admin/login';
           }
         },
         { label: 'No' }
@@ -302,7 +302,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
   };
 
   // Analytics Metrics
-  const validOrdersForMetrics = orders.filter(o => o.paymentStatus !== 'payment failed');
+  const validOrdersForMetrics = orders.filter(o => o.paymentStatus === 'paid' || o.paymentStatus === 'cod' || !o.paymentStatus);
   const totalRevenue = validOrdersForMetrics.reduce((acc, curr) => acc + (curr.status !== 'Cancelled' ? curr.totalAmount : 0), 0);
   const pendingOrders = validOrdersForMetrics.filter(o => o.status === 'Pending').length;
 
