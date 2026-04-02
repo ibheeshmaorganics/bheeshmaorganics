@@ -1,0 +1,118 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.4s ease;
+  padding: 0.5rem 0;
+}
+
+.scrolled {
+  background-color: #ffffff;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border-bottom-color: transparent;
+  padding: 0.25rem 0;
+}
+
+.navContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 70px;
+}
+
+.logo {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.5px;
+}
+
+.logoHighlight {
+  color: var(--color-primary);
+}
+
+.navLinks {
+  display: flex;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.navLink {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 1.05rem;
+  transition: color 0.3s;
+  position: relative;
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -4px;
+  left: 0;
+  background-color: var(--color-primary);
+  transition: width 0.3s ease;
+}
+
+.navLink:hover {
+  color: var(--color-primary);
+}
+
+.navLink:hover::after {
+  width: 100%;
+}
+
+.actionArea {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.orderStatusBtn {
+  background-color: var(--color-secondary);
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  text-decoration: none;
+}
+
+.orderStatusBtn:hover {
+  background-color: var(--color-tertiary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.cartIcon {
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.cartIcon:hover {
+  color: var(--color-primary);
+  background: rgba(75, 174, 79, 0.1);
+  transform: scale(1.1);
+}
+
+@media (max-width: 900px) {
+  .navLinks {
+    display: none;
+  }
+  .trackInput {
+    width: 110px;
+  }
+}

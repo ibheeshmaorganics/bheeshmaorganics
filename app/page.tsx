@@ -1,65 +1,210 @@
-import Image from "next/image";
+'use client';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import Marquee from 'react-fast-marquee';
+import styles from './page.module.css';
+
+const fadeUp: any = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
+};
+
+const staggerContainer: any = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15 }
+  }
+};
+
+const scaleIn: any = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.8, ease: "easeOut" } }
+};
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className={styles.main}>
+      {/* Hero Section */}
+      <section className={styles.hero}>
+        <div className={styles.blob1}></div>
+        <div className={styles.blob2}></div>
+
+        <div className={`container ${styles.heroContent}`}>
+          <motion.div
+            className={styles.heroText}
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <motion.div variants={fadeUp} className={styles.tag}>
+              🍃 Premium Ayurvedic Wellness
+            </motion.div>
+            <motion.h1 variants={fadeUp} className={styles.title}>
+              India's Trusted <br />
+              <span className={styles.highlight}>Organic & Ayurvedic</span> <br />
+              Brand
+            </motion.h1>
+            <motion.p variants={fadeUp} className={styles.subtitle}>
+              From natural sourcing to carefully crafted products. Discover the power of Himalayan Sea Buckthorn, known for its nutritional benefits, antioxidant properties, and support for immunity.
+            </motion.p>
+            <motion.div variants={fadeUp} className={styles.ctaGroup}>
+              <Link href="/products" prefetch={true} className={`btn btn-primary ${styles.btnLarge}`}>Explore Products</Link>
+              <Link href="/about" prefetch={true} className={`btn ${styles.btnOutline}`}>Our Story</Link>
+            </motion.div>
+
+            <motion.div variants={fadeUp} className={styles.badges}>
+              <span>✓ Quality Ingredients</span>
+              <span>✓ Herbal Formulations</span>
+              <span>✓ Ayurvedic Inspired</span>
+            </motion.div>
+          </motion.div>
+
+          <motion.div
+            className={styles.heroImageContainer}
+            variants={scaleIn}
+            initial="hidden"
+            animate="visible"
           >
-            Documentation
-          </a>
+            <img src="/images/group_products.png" alt="Bheeshma Organics Product Collection" className={styles.heroMainImage} />
+          </motion.div>
         </div>
-      </main>
+      </section>
+
+      {/* Branding Section */}
+      <section className={styles.brandingSection}>
+        <div className="container">
+          <motion.div
+            className={styles.brandingHeader}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+          >
+            <h2 className={styles.brandingTitle}>Bheeshma Organics™</h2>
+            <p className={styles.brandingSubtitle}>
+              India's Trusted Organic & Ayurvedic Wellness Brand
+            </p>
+            <div className={styles.brandingDivider}></div>
+            <p className={styles.brandingTagline}>
+              Carefully Selected Herbs | Botanical Extracts | Himalayan Sea Buckthorn
+            </p>
+          </motion.div>
+
+          <motion.div
+            className={styles.brandGrid}
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+          >
+            {[
+              { icon: '/images/quality.png', text: 'Quality Ingredients', desc: 'Sourced purely from nature' },
+              { icon: '/images/herbal.png', text: 'Herbal Formulations', desc: 'Rooted in traditional science' },
+              { icon: '/images/botanical.png', text: 'Botanical Extracts', desc: 'Potency in every drop' },
+              { icon: '/images/manufactured.png', text: 'Carefully Manufactured', desc: 'Highest hygiene standards' },
+              { icon: '/images/ayurvedic.png', text: 'Ayurvedic Inspired', desc: 'Balancing mind & body' }
+            ].map((item, i) => (
+              <motion.div key={i} variants={fadeUp} className={styles.brandItem}>
+                <div className={styles.brandImageWrapper}>
+                  <img src={item.icon} alt={item.text} className={styles.brandImage} />
+                </div>
+                <h3 className={styles.brandText}>{item.text}</h3>
+                <p className={styles.brandDesc}>{item.desc}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Why Choose Us Section */}
+      <section className={styles.whyChooseSection}>
+        <div className="container">
+          <motion.div
+            className={styles.whyHeader}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.8 }}
+          >
+            <h2 className={styles.whyTitle}>Why Choose Bheeshma Organics?</h2>
+            <div className={styles.whyDivider}></div>
+            <p className={styles.whySubtitle}>We are committed to delivering the highest quality holistic wellness products, rooted in nature and proven by science.</p>
+          </motion.div>
+
+          <div className={styles.whyGridWrapper}>
+            {/* Desktop View */}
+            <div className={styles.whyGrid}>
+              {[
+                { icon: '/images/pure_organic.png', title: '100% Pure & Organic', text: 'No artificial additives, fillers, or harmful chemicals. We source only the finest raw botanical ingredients.' },
+                { icon: '/images/himalayan_sourced.png', title: 'Himalayan Sourced', text: 'Our Sea Buckthorn is carefully hand-harvested from the pristine altitudes of the Himalayas for maximum potency.' },
+                { icon: '/images/gmp_certified.png', title: 'GMP Certified Quality', text: 'Manufactured in state-of-the-art facilities following strict purity, safety, and hygiene standards.' },
+                { icon: '/images/ethical_sustainable.png', title: 'Ethical & Sustainable', text: 'We believe in giving back to nature and supporting local farming communities with fair trade practices.' },
+                { icon: '/images/quality.png', title: 'Clinically Proven', text: 'Our formulations are rigorously tested for safety, efficacy, and nutritional value before ever reaching your home.' },
+                { icon: '/images/ayurvedic.png', title: 'Ayurvedic Heritage', text: 'We honor ancient Indian medicinal wisdom, perfectly balancing modern scientific extraction with traditional healing methods.' }
+              ].map((feature, idx) => (
+                <motion.div
+                  key={idx}
+                  className={styles.whyCard}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ duration: 0.6, delay: idx * 0.15 }}
+                >
+                  <div className={styles.whyImageWrapper}>
+                    <img src={feature.icon} alt={feature.title} className={styles.whyImage} />
+                  </div>
+                  <h3 className={styles.whyCardTitle}>{feature.title}</h3>
+                  <p className={styles.whyCardText}>{feature.text}</p>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Mobile View with Native React Fast Marquee */}
+            <div className={styles.mobileMarquee}>
+              <Marquee speed={40} gradient={false} pauseOnHover={true}>
+                {[
+                  { icon: '/images/pure_organic.png', title: '100% Pure & Organic', text: 'No artificial additives, fillers, or harmful chemicals. We source only the finest raw botanical ingredients.' },
+                  { icon: '/images/himalayan_sourced.png', title: 'Himalayan Sourced', text: 'Our Sea Buckthorn is carefully hand-harvested from the pristine altitudes of the Himalayas for maximum potency.' },
+                  { icon: '/images/gmp_certified.png', title: 'GMP Certified Quality', text: 'Manufactured in state-of-the-art facilities following strict purity, safety, and hygiene standards.' },
+                  { icon: '/images/ethical_sustainable.png', title: 'Ethical & Sustainable', text: 'We believe in giving back to nature and supporting local farming communities with fair trade practices.' },
+                  { icon: '/images/quality.png', title: 'Clinically Proven', text: 'Our formulations are rigorously tested for safety, efficacy, and nutritional value before ever reaching your home.' },
+                  { icon: '/images/ayurvedic.png', title: 'Ayurvedic Heritage', text: 'We honor ancient Indian medicinal wisdom, perfectly balancing modern scientific extraction with traditional healing methods.' }
+                ].map((feature, idx) => (
+                  <div key={`m-${idx}`} className={styles.whyCardMobile}>
+                    <div className={styles.whyImageWrapper}>
+                      <img src={feature.icon} alt={feature.title} className={styles.whyImage} />
+                    </div>
+                    <h3 className={styles.whyCardTitle}>{feature.title}</h3>
+                    <p className={styles.whyCardText}>{feature.text}</p>
+                  </div>
+                ))}
+              </Marquee>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mission Section */}
+      <motion.section
+        className={styles.mission}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 1 }}
+      >
+        <div className={`container ${styles.missionContent}`}>
+          <div className={styles.missionGlassWrapper}>
+            <h2>Our Mission</h2>
+            <p>
+              To expand into a complete range of herbal, Ayurvedic, and natural wellness products that promote a healthy lifestyle using traditional knowledge and natural ingredients.
+            </p>
+            <p className={styles.missionHighlight}>
+              "We believe in purity, quality, and the power of nature for better health."
+            </p>
+          </div>
+        </div>
+      </motion.section>
     </div>
   );
 }
