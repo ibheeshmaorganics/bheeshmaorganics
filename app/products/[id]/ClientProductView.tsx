@@ -385,33 +385,37 @@ export default function ClientProductView({ product }: { product: any }) {
         {/* Left Side: Images (Desktop) */}
         <div className={`${styles.imageSection} bo-desktop-only`}>
           <div style={{ position: 'relative' }}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={selectedImage}
-                className={styles.mainImageWrapper}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {images.length > 0 ? (
-                  <img src={images[selectedImage]} alt={product.name} className={styles.mainImage} />
-                ) : (
-                  <div style={{ fontSize: '5rem' }}>🌿</div>
-                )}
-              </motion.div>
-            </AnimatePresence>
+            <div 
+               id="desktop-image-carousel"
+               style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', gap: '0', scrollbarWidth: 'none', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', scrollBehavior: 'smooth' }}
+               onScroll={(e) => {
+                 const scrollLeft = e.currentTarget.scrollLeft;
+                 const width = e.currentTarget.clientWidth;
+                 const newIndex = Math.round(scrollLeft / width);
+                 if(newIndex !== selectedImage) setSelectedImage(newIndex);
+               }}
+            >
+              {images.length > 0 ? images.map((img: string, i: number) => (
+                <img key={i} src={img} alt={product.name} style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', objectFit: 'cover', aspectRatio: '1/1' }} />
+              )) : <div style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🌿</div>}
+            </div>
 
             {images.length > 1 && (
               <>
                 <button 
-                  onClick={() => setSelectedImage(prev => prev === 0 ? images.length - 1 : prev - 1)} 
+                  onClick={() => {
+                    const el = document.getElementById('desktop-image-carousel');
+                    if(el) el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
+                  }} 
                   style={{ position: 'absolute', top: '50%', left: '15px', transform: 'translateY(-50%)', width: '45px', height: '45px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.9)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.1)', fontSize: '1.2rem', color: '#334155' }}
                 >
                   ❮
                 </button>
                 <button 
-                  onClick={() => setSelectedImage(prev => prev === images.length - 1 ? 0 : prev + 1)} 
+                  onClick={() => {
+                    const el = document.getElementById('desktop-image-carousel');
+                    if(el) el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
+                  }} 
                   style={{ position: 'absolute', top: '50%', right: '15px', transform: 'translateY(-50%)', width: '45px', height: '45px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.9)', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.1)', fontSize: '1.2rem', color: '#334155' }}
                 >
                   ❯
@@ -426,7 +430,11 @@ export default function ClientProductView({ product }: { product: any }) {
                 <img
                   key={i}
                   src={img}
-                  onClick={() => setSelectedImage(i)}
+                  onClick={() => {
+                    setSelectedImage(i);
+                    const el = document.getElementById('desktop-image-carousel');
+                    if(el) el.scrollTo({ left: el.clientWidth * i, behavior: 'smooth' });
+                  }}
                   className={`${styles.thumb} ${selectedImage === i ? styles.thumbActive : ''}`}
                   alt={`Thumbnail ${i}`}
                   style={{ flexShrink: 0, minWidth: '80px', cursor: 'pointer' }}
@@ -450,8 +458,8 @@ export default function ClientProductView({ product }: { product: any }) {
                }}
             >
               {images.length > 0 ? images.map((img: string, i: number) => (
-                <img key={i} src={img} alt={product.name} style={{ width: '100%', flexShrink: 0, scrollSnapAlign: 'center', objectFit: 'cover', aspectRatio: '1/1' }} />
-              )) : <div style={{ width: '100%', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🌿</div>}
+                <img key={i} src={img} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', objectFit: 'cover', aspectRatio: '1/1' }} />
+              )) : <div style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🌿</div>}
             </div>
 
             {images.length > 1 && (
@@ -481,7 +489,11 @@ export default function ClientProductView({ product }: { product: any }) {
           {images.length > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
               {images.map((_: any, i: number) => (
-                <span key={i} style={{ width: i === selectedImage ? '10px' : '6px', height: i === selectedImage ? '10px' : '6px', borderRadius: '50%', background: i === selectedImage ? 'var(--color-primary)' : '#cbd5e1', transition: 'all 0.2s ease', display: 'inline-block' }} />
+                <span key={i} onClick={() => {
+                    setSelectedImage(i);
+                    const el = document.getElementById('mobile-image-carousel');
+                    if (el) el.scrollTo({ left: el.clientWidth * i, behavior: 'smooth' });
+                  }} style={{ width: i === selectedImage ? '10px' : '6px', height: i === selectedImage ? '10px' : '6px', borderRadius: '50%', background: i === selectedImage ? 'var(--color-primary)' : '#cbd5e1', transition: 'all 0.2s ease', display: 'inline-block', cursor: 'pointer' }} />
               ))}
             </div>
           )}

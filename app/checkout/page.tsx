@@ -51,7 +51,10 @@ export default function CheckoutPage() {
     }
   };
 
-  const totalAmount = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const baseTotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const isOnline = formData.paymentMethod === 'Razorpay';
+  const discountAmount = isOnline ? Math.round(baseTotal * 0.075) : 0;
+  const finalTotalAmount = baseTotal - discountAmount;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +93,7 @@ export default function CheckoutPage() {
             quantity: item.quantity,
             price: item.price
           })),
-          totalAmount: totalAmount,
+          totalAmount: finalTotalAmount,
           paymentMethod: formData.paymentMethod
         })
       });
@@ -258,10 +261,25 @@ export default function CheckoutPage() {
 
             <div className={styles.totalRow}>
               <span style={{ display: 'flex', flexDirection: 'column' }}>
-                Total
+                Item Total
                 <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500, marginTop: '2px' }}>(Incl. of all taxes)</span>
               </span>
-              <span style={{ color: 'var(--color-tertiary)' }}>₹{totalAmount}</span>
+              <span>₹{baseTotal}</span>
+            </div>
+            {isOnline && (
+              <div className={styles.totalRow} style={{ marginTop: '10px', fontSize: '1rem', color: '#16a34a' }}>
+                <span style={{ display: 'flex', flexDirection: 'column' }}>
+                  Online Payment Discount (7.5%)
+                </span>
+                <span>- ₹{discountAmount}</span>
+              </div>
+            )}
+            <div className={styles.totalRow} style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '15px', color: 'var(--color-tertiary)', fontSize: '1.4rem' }}>
+              <span style={{ display: 'flex', flexDirection: 'column' }}>
+                Total to Pay Now
+                {!isOnline && <span style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '4px', maxWidth: '280px', lineHeight: 1.4 }}>₹75 advance payment securely required for COD orders to confirm shipping. Balance ₹{finalTotalAmount - 75} on delivery.</span>}
+              </span>
+              <span>{isOnline ? `₹${finalTotalAmount}` : '₹75'}</span>
             </div>
           </div>
 
@@ -283,14 +301,20 @@ export default function CheckoutPage() {
                 <input type="text" placeholder="State" className={styles.inputField} required onChange={e => setFormData({ ...formData, state: e.target.value })} />
                 <input type="text" placeholder="PIN Code" className={styles.inputField} required onChange={e => setFormData({ ...formData, pinCode: e.target.value })} />
                 <h3 className={styles.sectionLabel}>Payment Method</h3>
-                <div style={{ display: 'flex', gap: '15px', gridColumn: '1 / -1' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', gap: '15px', gridColumn: '1 / -1', flexWrap: 'wrap' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: formData.paymentMethod === 'Cash' ? '#dcfce7' : '#f8fafc', padding: '12px 20px', borderRadius: '12px', border: `2px solid ${formData.paymentMethod === 'Cash' ? '#22c55e' : '#e2e8f0'}`, flex: 1 }}>
                     <input type="radio" name="paymentMethod" value="Cash" checked={formData.paymentMethod === 'Cash'} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} />
-                    Cash on Delivery
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 'bold' }}>Cash on Delivery</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>₹75 advance payment required</span>
+                    </div>
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: formData.paymentMethod === 'Razorpay' ? '#dcfce7' : '#f8fafc', padding: '12px 20px', borderRadius: '12px', border: `2px solid ${formData.paymentMethod === 'Razorpay' ? '#22c55e' : '#e2e8f0'}`, flex: 1 }}>
                     <input type="radio" name="paymentMethod" value="Razorpay" checked={formData.paymentMethod === 'Razorpay'} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} />
-                    Pay Online
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontWeight: 'bold' }}>Pay Online Securely</span>
+                      <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 'bold' }}>Get 7.5% OFF</span>
+                    </div>
                   </label>
                 </div>
               </div>

@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       data: orderData
     });
 
-    if (body.paymentMethod === 'Razorpay') {
+    if (body.paymentMethod === 'Razorpay' || body.paymentMethod === 'Cash') {
       try {
         const Razorpay = require('razorpay');
 
@@ -83,8 +83,11 @@ export async function POST(req: NextRequest) {
           key_secret: process.env.RAZORPAY_KEY_SECRET,
         });
 
+        // For COD, advance payment is 75 rupees
+        const payAmount = body.paymentMethod === 'Cash' ? 75 : body.totalAmount;
+
         const options = {
-          amount: Math.round(body.totalAmount * 100), // amount in smallest currency unit
+          amount: Math.round(payAmount * 100), // amount in paise
           currency: "INR",
           receipt: order.id,
         };
@@ -108,7 +111,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Default Cash On Delivery sequence
+    // Fallback if somehow neither Cash nor Razorpay is sent
     return NextResponse.json({
       success: true,
       orderId: order.id,

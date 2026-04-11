@@ -26,9 +26,16 @@ export async function POST(req: NextRequest) {
 
     if (isAuthentic) {
       // Securely update the database state
+      const order = await prisma.order.findUnique({ where: { id: orderId } });
+      const currentMethod = order?.paymentMethod || 'Razorpay';
+      const isCod = currentMethod === 'Cash';
+
       await prisma.order.update({
         where: { id: orderId },
-        data: { status: 'Processing', paymentStatus: 'paid' } // Set status to Processing/Paid natively
+        data: { 
+          status: 'Processing', 
+          paymentStatus: isCod ? 'cod (Advance Paid)' : 'paid' 
+        } // Set status to Processing/Paid natively
       });
 
       return NextResponse.json({ success: true, message: 'Payment successfully verified' });

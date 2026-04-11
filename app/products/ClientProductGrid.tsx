@@ -8,29 +8,19 @@ import { toast, Toaster } from 'sonner';
 interface Product { _id: string; name: string; category: string; price: number; discount?: number; images?: string[]; imageUrl?: string; description?: string; inStock?: boolean; variants?: any[]; quantity?: number; unit?: string; }
 
 function ProductImageCarousel({ images, name }: { images: string[], name: string }) {
-  const [idx, setIdx] = useState(0);
-
   if (!images || images.length === 0) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🌿</div>;
   if (images.length === 1) return <img src={images[0]} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />;
 
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <img src={images[idx]} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
-      <div style={{ position: 'absolute', bottom: '8px', width: '100%', display: 'flex', justifyContent: 'center', gap: '6px' }}>
+    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', width: '100%', height: '100%', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollBehavior: 'smooth' }}>
+        {images.map((img, i) => (
+          <img key={i} src={img} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0, scrollSnapAlign: 'start' }} />
+        ))}
+      </div>
+      <div style={{ position: 'absolute', bottom: '8px', width: '100%', display: 'flex', justifyContent: 'center', gap: '6px', pointerEvents: 'none' }}>
         {images.map((_, i) => (
-          <span
-            key={i}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIdx(i); }}
-            style={{
-              width: i === idx ? '8px' : '6px',
-              height: i === idx ? '8px' : '6px',
-              borderRadius: '50%',
-              background: i === idx ? '#4bae4f' : 'rgba(255,255,255,0.7)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          />
+          <span key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
         ))}
       </div>
     </div>
@@ -213,8 +203,8 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
 
                   return (
                     <>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', width: '100%', marginBottom: '10px' }}>
-                        <h3 onClick={() => router.push(`/products/${p._id}`)} style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)', fontWeight: 700, color: 'var(--color-text)', textTransform: 'capitalize', cursor: 'pointer', margin: 0, width: '100%', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>{p.name}</h3>
+                      <div onClick={() => router.push(`/products/${p._id}`)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', width: '100%', marginBottom: '10px' }}>
+                        <h3 style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)', fontWeight: 700, color: 'var(--color-text)', textTransform: 'capitalize', margin: 0, width: '100%', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>{p.name}</h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flexShrink: 0, width: '100%' }}>
                           {p.discount && p.discount > 0 ? (
