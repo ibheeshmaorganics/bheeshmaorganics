@@ -136,7 +136,7 @@ function TrackContent() {
                   <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '12px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                       <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Method</span>
-                      <span style={{ fontWeight: 700, color: '#1e293b' }}>
+                      <span style={{ fontWeight: 800, color: order.paymentStatus?.toLowerCase().includes('cod') ? '#ea580c' : order.paymentStatus === 'paid' ? '#16a34a' : order.paymentStatus === 'payment failed' ? '#ef4444' : '#1e293b' }}>
                         {order.paymentStatus?.toLowerCase().includes('cod') ? 'Cash on Delivery' : order.paymentStatus === 'paid' ? 'Online Payment (Paid)' : order.paymentStatus === 'payment failed' ? 'Payment Failed' : 'Payment Processing'}
                       </span>
                     </div>

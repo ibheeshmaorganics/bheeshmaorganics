@@ -28,6 +28,11 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [orderPage, setOrderPage] = useState(1);
+  const [orderFilterTab, setOrderFilterTab] = useState('New Orders');
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [isShiprocketModalOpen, setIsShiprocketModalOpen] = useState(false);
+  const [bulkDimensions, setBulkDimensions] = useState({ length: 15, width: 10, height: 10, weight: 1.5 });
+  const [bulkPickupDate, setBulkPickupDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -37,7 +42,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
     if (params.get('tab')) {
       setActiveTabState(params.get('tab') as string);
     }
-    
+
     // Check mobile
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
     checkMobile();
@@ -320,18 +325,18 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
         </div>
         <nav className={styles.sidebarNav}>
           <button className={`${styles.navItem} ${activeTab === 'dashboard' ? styles.active : ''}`} onClick={() => setActiveTab('dashboard')}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg> Dashboard Overview
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg> Home
           </button>
           <button className={`${styles.navItem} ${activeTab === 'orders' ? styles.active : ''}`} onClick={() => setActiveTab('orders')}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Manage Orders
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Orders
             {pendingOrders > 0 && <span style={{ marginLeft: 'auto', background: 'white', color: 'black', padding: '2px 8px', borderRadius: '20px', fontSize: '0.8rem' }}>{pendingOrders}</span>}
           </button>
           <button className={`${styles.navItem} ${activeTab === 'products' ? styles.active : ''}`} onClick={() => setActiveTab('products')}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Inventory & Store
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Products
           </button>
 
           <button className={styles.navItemLogout} onClick={handleLogout}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Secure Logout
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Logout
           </button>
         </nav>
       </aside>
@@ -407,7 +412,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                   {/* TRAFFIC & VISITOR METRICS */}
                   <h3 style={{ marginBottom: '1rem', color: 'rgba(255,255,255,0.9)', fontSize: '1.2rem', fontWeight: 700 }}>Website Traffic & Visitors</h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                    
+
                     <div style={{ background: '#0e1726', border: '1px solid #1e293b', borderRadius: '12px', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <div style={{ background: 'rgba(56, 189, 248, 0.1)', padding: '12px', borderRadius: '50%', color: '#38bdf8' }}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -575,9 +580,9 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                         <h4 style={{ marginBottom: '10px' }}>
                           Purchased Products (Total: ₹{editingOrder.totalAmount})
                           {(editingOrder.paymentMethod === 'Cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod' || editingOrder.paymentStatus?.toLowerCase().includes('cod')) && editingOrder.totalAmount > 75 && (
-                             <span style={{ color: '#ef4444', marginLeft: '10px', fontSize: '1rem', fontWeight: 700 }}>
-                               (To Collect: ₹{editingOrder.totalAmount - 75})
-                             </span>
+                            <span style={{ color: '#ef4444', marginLeft: '10px', fontSize: '1rem', fontWeight: 700 }}>
+                              (To Collect: ₹{editingOrder.totalAmount - 75})
+                            </span>
                           )}
                         </h4>
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -596,8 +601,21 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                     </form>
                   </div>
                 ) : (() => {
+                  const handleSelectOrder = (id: string) => {
+                    const next = new Set(selectedOrders);
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    setSelectedOrders(next);
+                  };
+
                   const filteredOrders = orders.filter(o => {
                     if (o.paymentStatus === 'draft_intent') return false;
+
+                    if (orderFilterTab === 'New Orders') {
+                      if (o.status !== 'Pending' && o.status !== 'Processing') return false;
+                    } else if (orderFilterTab !== 'All' && o.status !== orderFilterTab) {
+                      return false;
+                    }
                     const searchLower = orderSearch.toLowerCase();
                     const dateString = new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase();
                     return o._id.toLowerCase().includes(searchLower) ||
@@ -612,10 +630,58 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
                   const paginatedOrders = filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+                  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+                    if (e.target.checked) {
+                      const selectableOrders = paginatedOrders.filter(o =>
+                        !(o.paymentStatus === 'payment processing' || o.paymentStatus === 'pending' || o.paymentStatus === 'payment failed')
+                      );
+                      setSelectedOrders(new Set(selectableOrders.map(o => o._id)));
+                    } else {
+                      setSelectedOrders(new Set());
+                    }
+                  };
+
                   return (
                     <div>
-                      <div className={styles.productsToolbar} style={{ marginBottom: '1.5rem', justifyContent: 'flex-start' }}>
-                        <div className={styles.searchBar}>
+                      {/* Modern Sub-Navigation */}
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', padding: '10px', background: 'white', borderRadius: '12px', overflowX: 'auto', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+                        {['New Orders', 'Shipped', 'Delivered', 'Cancelled', 'All'].map(t => {
+                          const isActive = orderFilterTab === t;
+                          const count = orders.filter(o => {
+                            if (o.paymentStatus === 'draft_intent') return false;
+                            if (t === 'All') return true;
+                            if (t === 'New Orders') return o.status === 'Pending' || o.status === 'Processing';
+                            return o.status === t;
+                          }).length;
+
+                          return (
+                            <button
+                              key={t}
+                              onClick={() => { setOrderFilterTab(t); setOrderPage(1); setSelectedOrders(new Set()); }}
+                              style={{
+                                padding: '8px 16px',
+                                fontWeight: 600,
+                                fontSize: '0.9rem',
+                                cursor: 'pointer',
+                                border: 'none',
+                                background: isActive ? '#10b981' : 'transparent',
+                                color: isActive ? 'white' : '#475569',
+                                borderRadius: '8px',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                            >
+                              {t} <span style={{ background: isActive ? 'rgba(255,255,255,0.25)' : '#f1f5f9', padding: '2px 8px', borderRadius: '20px', fontSize: '0.8rem', color: isActive ? 'white' : '#64748b' }}>{count}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className={styles.productsToolbar} style={{ marginBottom: '1.5rem', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px' }}>
+                        <div className={styles.searchBar} style={{ maxWidth: '400px', flex: 1 }}>
                           <svg className={styles.searchIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                           <input
                             type="text"
@@ -625,71 +691,122 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                             onChange={e => { setOrderSearch(e.target.value); setOrderPage(1); }}
                           />
                         </div>
+
+                        <AnimatePresence>
+                          {selectedOrders.size > 0 && Array.from(selectedOrders).every(id => orders.find(o => o._id === id)?.status === 'Shipped') && (
+                            <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={() => {
+                              toast.promise(
+                                fetch('/api/shiprocket/label', {
+                                  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderIds: Array.from(selectedOrders) })
+                                }).then(async res => {
+                                  const data = await res.json();
+                                  if (!res.ok) throw new Error(data.error);
+                                  return data;
+                                }),
+                                {
+                                  loading: 'Generating shipping labels...',
+                                  success: (data) => {
+                                    window.open(data.label_url, '_blank');
+                                    setSelectedOrders(new Set());
+                                    return 'Labels ready to print!';
+                                  },
+                                  error: (err) => err.message
+                                }
+                              );
+                            }} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)' }}>
+                              🖨️ Print Labels ({selectedOrders.size})
+                            </motion.button>
+                          )}
+                          {selectedOrders.size > 0 && !Array.from(selectedOrders).every(id => orders.find(o => o._id === id)?.status === 'Shipped') && (
+                            <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={() => setIsShiprocketModalOpen(true)} style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)' }}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                              Ship via Shiprocket ({selectedOrders.size})
+                            </motion.button>
+                          )}
+                        </AnimatePresence>
                       </div>
 
                       <div className={styles.tableCard}>
                         <table className={styles.table}>
                           <thead>
                             <tr>
-                              <th>Order ID</th>
-                              <th>Customer & Contact</th>
-                              <th>Amount</th>
-                              <th>Date</th>
-                              <th>Status & Action</th>
+                              <th style={{ width: '40px', textAlign: 'center', padding: '10px 12px' }}>
+                                <input type="checkbox" onChange={handleSelectAll} checked={paginatedOrders.length > 0 && paginatedOrders.every(o => selectedOrders.has(o._id))} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                              </th>
+                              <th style={{ padding: '10px 12px' }}>Order ID</th>
+                              <th style={{ padding: '10px 12px' }}>Customer & Contact</th>
+                              <th style={{ padding: '10px 12px' }}>Amount</th>
+                              <th style={{ padding: '10px 12px' }}>Date</th>
+                              <th style={{ padding: '10px 12px' }}>Status & Action</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {paginatedOrders.map(o => (
-                              <tr key={o._id}>
-                                <td style={{ fontWeight: 600 }}>#{o._id.slice(-6).toUpperCase()}</td>
-                                <td>
-                                  <strong>{o.customerName}</strong><br />
-                                  <span style={{ color: 'var(--color-text-light)', fontSize: '0.9rem' }}>{o.phone}</span>
-                                </td>
-                                <td style={{ fontWeight: 700, color: 'var(--color-tertiary)' }}>
-                                  Total: ₹{o.totalAmount}<br />
-                                  {(o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod' || o.paymentStatus?.toLowerCase().includes('cod')) && o.totalAmount > 75 && (
-                                    <span style={{ color: '#ef4444', fontSize: '0.9rem', display: 'block', margin: '4px 0' }}>
-                                      To Collect: ₹{o.totalAmount - 75}
-                                    </span>
-                                  )}
-                                  <span style={{
-                                    fontSize: '0.8rem',
-                                    fontWeight: 600,
-                                    padding: '2px 6px',
-                                    borderRadius: '4px',
-                                    color: o.paymentStatus === 'paid' ? '#10b981' : o.paymentStatus === 'payment failed' ? '#ef4444' : '#f59e0b',
-                                    background: o.paymentStatus === 'paid' ? '#d1fae5' : o.paymentStatus === 'payment failed' ? '#fee2e2' : '#fef3c7',
-                                    textTransform: 'uppercase'
-                                  }}>
-                                    {o.paymentStatus || 'cod'}
-                                  </span>
-                                </td>
-                                <td>
-                                  {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}<br />
-                                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                    {new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ 
-                                      fontWeight: 600, 
-                                      padding: '4px 8px', 
-                                      borderRadius: '6px', 
-                                      background: o.status === 'Delivered' ? '#dcfce7' : o.status === 'Cancelled' ? '#fee2e2' : o.status === 'Shipped' ? '#dbeafe' : '#fef3c7',
-                                      color: o.status === 'Delivered' ? '#166534' : o.status === 'Cancelled' ? '#991b1b' : o.status === 'Shipped' ? '#1e40af' : '#92400e',
-                                      fontSize: '0.85rem'
+                            {paginatedOrders.map(o => {
+                              const blockSelection = o.paymentStatus === 'payment processing' || o.paymentStatus === 'pending' || o.paymentStatus === 'payment failed';
+
+                              return (
+                                <tr key={o._id} style={{ background: selectedOrders.has(o._id) ? '#f0fdf4' : blockSelection ? '#f8fafc' : 'transparent', transition: 'background 0.2s', opacity: blockSelection ? 0.6 : 1 }}>
+                                  <td style={{ textAlign: 'center', padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedOrders.has(o._id)}
+                                      onChange={() => handleSelectOrder(o._id)}
+                                      disabled={blockSelection}
+                                      style={{ width: '16px', height: '16px', cursor: blockSelection ? 'not-allowed' : 'pointer' }}
+                                      title={blockSelection ? "Cannot ship: Payment not successfully captured" : ""}
+                                    />
+                                  </td>
+                                  <td style={{ fontWeight: 600, padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>#{o._id.slice(-6).toUpperCase()}</td>
+                                  <td style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                                    <strong>{o.customerName}</strong><br />
+                                    <span style={{ color: 'var(--color-text-light)', fontSize: '0.9rem' }}>{o.phone}</span>
+                                  </td>
+                                  <td style={{ fontWeight: 700, color: 'var(--color-tertiary)', padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                                    Total: ₹{o.totalAmount}<br />
+                                    {(o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod' || o.paymentStatus?.toLowerCase().includes('cod')) && o.totalAmount > 75 && (
+                                      <span style={{ color: '#ef4444', fontSize: '0.85rem', display: 'block', margin: '2px 0' }}>
+                                        To Collect: ₹{o.totalAmount - 75}
+                                      </span>
+                                    )}
+                                    <span style={{
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      color: o.paymentStatus === 'paid' ? '#10b981' : o.paymentStatus === 'payment failed' ? '#ef4444' : '#f59e0b',
+                                      background: o.paymentStatus === 'paid' ? '#d1fae5' : o.paymentStatus === 'payment failed' ? '#fee2e2' : '#fef3c7',
+                                      textTransform: 'uppercase'
                                     }}>
-                                      {o.status}
+                                      {o.paymentStatus || 'cod'}
                                     </span>
-                                    <button className={styles.adminWhiteBtn} style={{ padding: '6px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap' }} onClick={() => { setEditingOrder(o); setIsEditingOrder(true); }}>
-                                      View / Edit Details
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                  <td style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                                    {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}<br />
+                                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                      {new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        padding: '4px 10px',
+                                        borderRadius: '6px',
+                                        background: o.status === 'Delivered' ? '#dcfce7' : o.status === 'Cancelled' ? '#fee2e2' : o.status === 'Shipped' ? '#dbeafe' : '#fef3c7',
+                                        color: o.status === 'Delivered' ? '#166534' : o.status === 'Cancelled' ? '#991b1b' : o.status === 'Shipped' ? '#1e40af' : '#92400e',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 600
+                                      }}>
+                                        {o.status}
+                                      </span>
+                                      <button className={styles.adminWhiteBtn} style={{ padding: '4px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap', pointerEvents: 'auto' }} onClick={() => { setEditingOrder(o); setIsEditingOrder(true); }}>
+                                        View / Edit Details
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                             {filteredOrders.length === 0 && (
                               <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>No orders matched your search.</td></tr>
                             )}
@@ -718,6 +835,80 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                           </div>
                         )}
                       </div>
+                      <AnimatePresence>
+                        {isShiprocketModalOpen && (
+                          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+                            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} style={{ background: 'white', padding: '30px', borderRadius: '16px', color: '#1e293b', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <div>
+                                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                                    Shiprocket Dispatch
+                                  </h3>
+                                  <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>Generate AWBs for {selectedOrders.size} selected orders.</p>
+                                </div>
+                                <button onClick={() => setIsShiprocketModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#94a3b8', cursor: 'pointer' }}>&times;</button>
+                              </div>
+                              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px', paddingBottom: '5px', marginBottom: '20px' }}>
+                                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '10px', textTransform: 'uppercase' }}>Package Details (per order)</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
+                                  <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Weight (kg)</label>
+                                    <input type="number" step="0.1" value={bulkDimensions.weight} onChange={e => setBulkDimensions({ ...bulkDimensions, weight: parseFloat(e.target.value) || 1 })} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>L × W × H (cm)</label>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      <input type="number" value={bulkDimensions.length} onChange={e => setBulkDimensions({ ...bulkDimensions, length: parseInt(e.target.value) || 10 })} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center' }} />
+                                      <input type="number" value={bulkDimensions.width} onChange={e => setBulkDimensions({ ...bulkDimensions, width: parseInt(e.target.value) || 10 })} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center' }} />
+                                      <input type="number" value={bulkDimensions.height} onChange={e => setBulkDimensions({ ...bulkDimensions, height: parseInt(e.target.value) || 10 })} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center' }} />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{ marginTop: '15px' }}>
+                                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Schedule Pickup Date</label>
+                                  <input type="date" value={bulkPickupDate} onChange={e => setBulkPickupDate(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                  <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.75rem' }}>Shiprocket will automatically assign the best delivery partner (Bluedart, Delhivery, etc.) based on pincode & weight.</p>
+                                </div>
+                              </div>
+                              <div style={{ marginBottom: '20px', padding: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e40af', fontSize: '0.85rem', display: 'flex', gap: '10px' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                <div><strong>Real-Time API Active.</strong> This will instantly sync the pickup, assign tracking links to the customer side, and prepare printing labels!</div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setIsShiprocketModalOpen(false)} style={{ padding: '10px 16px', border: '1px solid #e2e8f0', background: 'white', borderRadius: '8px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+                                <button onClick={() => {
+                                  toast.promise(
+                                    fetch('/api/shiprocket', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        orderIds: Array.from(selectedOrders),
+                                        dimensions: bulkDimensions,
+                                        pickupDate: bulkPickupDate
+                                      })
+                                    }).then(async res => {
+                                      const data = await res.json();
+                                      if (!res.ok) throw new Error(data.error || 'Failed to dispatch via Shiprocket');
+                                      return data;
+                                    }),
+                                    {
+                                      loading: 'Connecting to Shiprocket API & Generating Real AWBs...',
+                                      success: (data) => {
+                                        fetchData();
+                                        setIsShiprocketModalOpen(false);
+                                        setSelectedOrders(new Set());
+                                        return `Successfully dispatched ${data.processed} orders! AWBs are now live.`;
+                                      },
+                                      error: (err) => `Dispatch Error: ${err.message}`
+                                    }
+                                  );
+                                }} style={{ padding: '10px 24px', background: '#f59e0b', border: 'none', color: 'white', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(245, 158, 11, 0.3)' }}>Generate Bulk AWBs</button>
+                              </div>
+                            </motion.div>
+                          </div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 })()}
