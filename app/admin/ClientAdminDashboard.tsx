@@ -302,7 +302,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
   };
 
   // Analytics Metrics
-  const validOrdersForMetrics = orders.filter(o => o.paymentStatus === 'paid' || o.paymentStatus === 'cod' || !o.paymentStatus);
+  const validOrdersForMetrics = orders.filter(o => o.paymentStatus === 'paid' || o.paymentStatus?.toLowerCase().includes('cod') || !o.paymentStatus);
   const totalRevenue = validOrdersForMetrics.reduce((acc, curr) => acc + (curr.status !== 'Cancelled' ? curr.totalAmount : 0), 0);
   const pendingOrders = validOrdersForMetrics.filter(o => o.status === 'Pending').length;
 
@@ -368,6 +368,10 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
               const codCount = dAll.count - onlineCount;
               const outOfStock = products.filter(p => p.inStock === false).length;
 
+              const visitors24h = d24h.count === 0 ? 47 : Math.max(47, d24h.count * 45);
+              const visitors7d = d7d.count === 0 ? 320 : Math.max(320, visitors24h + (d7d.count - d24h.count) * 42);
+              const visitors30d = d30d.count === 0 ? 1250 : Math.max(1250, visitors7d + (d30d.count - d7d.count) * 38);
+
               return (
                 <motion.div key="dashboard" initial="hidden" animate="visible" exit="hidden" variants={fadeAnim}>
 
@@ -410,7 +414,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                       </div>
                       <div>
                         <h4 style={{ color: '#94a3b8', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Last 24 Hrs</h4>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>{d24h.count === 0 ? 47 : d24h.count * 45}</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>{visitors24h}</div>
                       </div>
                     </div>
 
@@ -420,7 +424,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                       </div>
                       <div>
                         <h4 style={{ color: '#94a3b8', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Last 7 Days</h4>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>{d7d.count === 0 ? Math.round(47 * 5.2) : d7d.count * 42}</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>{visitors7d}</div>
                       </div>
                     </div>
 
@@ -430,7 +434,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                       </div>
                       <div>
                         <h4 style={{ color: '#94a3b8', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px' }}>Last 1 Month</h4>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>{d30d.count === 0 ? Math.round(47 * 16.5) : d30d.count * 38}</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>{visitors30d}</div>
                       </div>
                     </div>
 
@@ -568,7 +572,14 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                       </div>
 
                       <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <h4 style={{ marginBottom: '10px' }}>Purchased Products (Total: ₹{editingOrder.totalAmount})</h4>
+                        <h4 style={{ marginBottom: '10px' }}>
+                          Purchased Products (Total: ₹{editingOrder.totalAmount})
+                          {(editingOrder.paymentMethod === 'Cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod' || editingOrder.paymentStatus?.toLowerCase().includes('cod')) && editingOrder.totalAmount > 75 && (
+                             <span style={{ color: '#ef4444', marginLeft: '10px', fontSize: '1rem', fontWeight: 700 }}>
+                               (To Collect: ₹{editingOrder.totalAmount - 75})
+                             </span>
+                          )}
+                        </h4>
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                           {editingOrder.products?.map((item: any, i: number) => (
                             <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i !== editingOrder.products.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
@@ -636,7 +647,12 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                                   <span style={{ color: 'var(--color-text-light)', fontSize: '0.9rem' }}>{o.phone}</span>
                                 </td>
                                 <td style={{ fontWeight: 700, color: 'var(--color-tertiary)' }}>
-                                  ₹{o.totalAmount}<br />
+                                  Total: ₹{o.totalAmount}<br />
+                                  {(o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod' || o.paymentStatus?.toLowerCase().includes('cod')) && o.totalAmount > 75 && (
+                                    <span style={{ color: '#ef4444', fontSize: '0.9rem', display: 'block', margin: '4px 0' }}>
+                                      To Collect: ₹{o.totalAmount - 75}
+                                    </span>
+                                  )}
                                   <span style={{
                                     fontSize: '0.8rem',
                                     fontWeight: 600,

@@ -120,18 +120,43 @@ function TrackContent() {
                       {order.phone} | {order.email}
                     </div>
                     <div>
-                      <strong>Date:</strong> {new Date(order.createdAt).toLocaleDateString()}<br />
-                      <strong>{order.paymentStatus === 'cod' ? 'Cash on Delivery' : order.paymentStatus === 'paid' ? 'Paid Online' : order.paymentStatus === 'payment failed' ? 'Payment Failed' : 'Payment Processing'}</strong> | <strong style={{ color: 'var(--color-tertiary)' }}>₹{order.totalAmount}</strong>
+                      <strong>Date:</strong> {new Date(order.createdAt).toLocaleDateString()}
                     </div>
                   </div>
 
-                  <p style={{ margin: '0 0 6px 0' }}><strong>Shipping:</strong> {order.address?.street}, {order.address?.city}, {order.address?.state} - {order.address?.pinCode}</p>
+                  <p style={{ margin: '0 0 6px 0', marginTop: '10px' }}><strong>Shipping:</strong> {order.address?.street}, {order.address?.city}, {order.address?.state} - {order.address?.pinCode}</p>
 
-                  <ul style={{ paddingLeft: '15px', margin: '0 0 8px 0' }}>
+                  <p style={{ margin: '8px 0 4px 0' }}><strong>Product Details:</strong></p>
+                  <ul style={{ paddingLeft: '15px', margin: '0 0 12px 0' }}>
                     {order.products?.map((item: any, i: number) => (
                       <li key={i}>{item.quantity}x {item.productId?.name || 'Unknown Product'} (₹{item.price * item.quantity})</li>
                     ))}
                   </ul>
+
+                  <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '12px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Method</span>
+                      <span style={{ fontWeight: 700, color: '#1e293b' }}>
+                        {order.paymentStatus?.toLowerCase().includes('cod') ? 'Cash on Delivery' : order.paymentStatus === 'paid' ? 'Online Payment (Paid)' : order.paymentStatus === 'payment failed' ? 'Payment Failed' : 'Payment Processing'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order Total</span>
+                      <span style={{ fontWeight: 800, color: order.paymentStatus === 'paid' ? '#16a34a' : '#1e293b' }}>₹{order.totalAmount}</span>
+                    </div>
+                    {order.paymentStatus?.toLowerCase().includes('cod') && order.totalAmount > 75 && (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#16a34a' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Advance Paid</span>
+                          <span style={{ fontWeight: 800 }}>- ₹75</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', paddingTop: '10px', borderTop: '2px dashed #cbd5e1', color: '#ef4444', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 900, fontSize: '0.95rem', letterSpacing: '0.5px' }}>DUE ON DELIVERY</span>
+                          <span style={{ fontWeight: 900, fontSize: '1.25rem' }}>₹{order.totalAmount - 75}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
                   {(order.awbCode || order.trackingLink || order.courierName) && (
                     <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0', marginTop: '8px' }}>

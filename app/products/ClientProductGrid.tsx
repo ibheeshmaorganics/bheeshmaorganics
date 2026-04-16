@@ -138,15 +138,30 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
 
   return (
     <div style={{ minHeight: '80vh', background: 'linear-gradient(180deg, #F8FBF8 0%, #FFFFFF 100%)' }}>
-      <div style={{ background: 'linear-gradient(135deg, #102A1C 0%, #295936 100%)', color: 'white', padding: 'clamp(6rem, 10vw, 8rem) 1rem clamp(1.5rem, 4vw, 3rem) 1rem', textAlign: 'center', position: 'relative' }}>
+      <div style={{ 
+        backgroundImage: 'url(/images/shop_hero_bg.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        color: 'white', 
+        padding: 'clamp(6rem, 10vw, 10rem) 1rem clamp(3rem, 4vw, 4rem) 1rem', 
+        textAlign: 'center', 
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '40vh'
+      }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(16, 42, 28, 0.5)' }}></div>
         <motion.div
           className="container"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
+          style={{ position: 'relative', zIndex: 1 }}
         >
-          <h1 style={{ fontSize: 'clamp(1.4rem, 6vw, 3.5rem)', fontWeight: 800, marginBottom: '1rem', color: 'white', letterSpacing: '-1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Premium Wellness Collection</h1>
-          <p style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)', color: 'rgba(255, 255, 255, 0.85)', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>Carefully crafted from pure Himalayan sourcing and traditional medicinal wisdom to support your daily holistic health.</p>
+          <h1 style={{ fontSize: 'clamp(1.8rem, 6vw, 4rem)', fontWeight: 800, marginBottom: '1rem', color: 'white', letterSpacing: '-1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>Premium Wellness Collection</h1>
+          <p style={{ fontSize: 'clamp(1.1rem, 2vw, 1.35rem)', color: 'rgba(255, 255, 255, 0.95)', maxWidth: '700px', margin: '0 auto', lineHeight: 1.6, textShadow: '0 1px 5px rgba(0,0,0,0.5)' }}>Carefully crafted from pure Himalayan sourcing and traditional medicinal wisdom to support your daily holistic health.</p>
         </motion.div>
       </div>
 

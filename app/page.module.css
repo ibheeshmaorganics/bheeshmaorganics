@@ -5,8 +5,9 @@
 
 .hero {
   position: relative;
-  background: linear-gradient(135deg, #102A1C 0%, #295936 100%);
-  /* Lush Deep Green */
+  background:
+    linear-gradient(135deg, rgba(10, 30, 15, 0.82) 0%, rgba(20, 60, 30, 0.75) 100%),
+    url('/images/hero_herbal_bg.png') center center / cover no-repeat;
   padding: 8rem 0 6rem 0;
   min-height: 90vh;
   display: flex;
@@ -604,5 +605,174 @@
 
   .missionGlassWrapper {
     padding: 3rem 1.5rem;
+  }
+}
+
+/* ─── Platform Hero Pills ─── */
+.platformHeroRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.platformHeroLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.amazonPill,
+.flipkartPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.3px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  text-decoration: none;
+}
+
+.amazonPill {
+  background: #ff9900;
+  color: #111;
+  font-style: italic;
+  font-family: 'Amazon Ember', 'Arial', sans-serif;
+  box-shadow: 0 4px 12px rgba(255, 153, 0, 0.4);
+}
+
+.amazonPill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255, 153, 0, 0.55);
+}
+
+.flipkartPill {
+  background: #2874F0;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(40, 116, 240, 0.4);
+}
+
+.flipkartPill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(40, 116, 240, 0.55);
+}
+
+/* ─── Platform Section ─── */
+.platformSection {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, #fdfaf5 0%, #fff8ec 100%);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.platformInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4rem;
+  flex-wrap: wrap;
+}
+
+.platformTextSide {
+  flex: 1 1 320px;
+}
+
+.platformEyebrow {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--color-primary);
+  margin-bottom: 0.75rem;
+}
+
+.platformHeading {
+  font-size: clamp(1.6rem, 2.5vw, 2.4rem);
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.25;
+  margin-bottom: 1rem;
+  letter-spacing: -0.5px;
+}
+
+.platformSub {
+  font-size: 1rem;
+  color: var(--color-text-light);
+  line-height: 1.7;
+  max-width: 420px;
+}
+
+/* ── Badge side (desktop) ── */
+.platformBadgeSide {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 0 0 auto;
+}
+
+/* Each badge link */
+.badgeLink {
+  display: block;
+  text-decoration: none;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s ease;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.badgeLink:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
+}
+
+/* Badge image */
+.badgeImg {
+  display: block;
+  width: 240px;
+  height: auto;
+  border-radius: 14px;
+}
+
+@media (max-width: 768px) {
+  .platformSection {
+    padding: 2.5rem 0;
+  }
+
+  .platformInner {
+    flex-direction: column;
+    gap: 1.25rem;
+    text-align: center;
+  }
+
+  .platformTextSide {
+    flex: none;
+    width: 100%;
+  }
+
+  .platformSub {
+    margin: 0 auto;
+    font-size: 0.9rem;
+  }
+
+  /* Badges move ABOVE the text on mobile */
+  .platformBadgeSide {
+    order: -1;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .badgeImg {
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .platformHeroRow {
+    justify-content: center;
   }
 }

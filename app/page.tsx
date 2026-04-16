@@ -58,6 +58,26 @@ export default function Home() {
               <span>✓ Herbal Formulations</span>
               <span>✓ Ayurvedic Inspired</span>
             </motion.div>
+
+            <motion.div variants={fadeUp} className={styles.platformHeroRow}>
+              <span className={styles.platformHeroLabel}> Buy Now On:</span>
+              <a
+                href="https://www.amazon.in/stores/BHEESHMAORGANICS/page/9E599402-C004-44CE-AD94-F92B6CE1B68A?lp_context_asin=B0GPQTGS4S&ref_=cm_sw_r_apann_ast_store_74NN36C7C6B899KEPKJB&dplnk=Y&dplnkId=f4420508-c96c-4c8a-9f98-1eddb62f7e98"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.amazonPill}
+              >
+                amazon.in
+              </a>
+              <a
+                href="https://dl.flipkart.com/dl/bheeshma-organics-himalayan-sea-buckthorn-pulp-concentrate/p/itm845870d47a9f3?pid=DAJHHHHZF5XWGMQF&lid=LSTDAJHHHHZF5XWGMQFEKEQRZ&hl_lid=&marketplace=FLIPKART&fm=eyJ3dHAiOiJhdGxhc19wcm9kdWN0X3N1bW1hcnlfZ3JpZF9iZWF1dHkiLCJwcnB0Ijoic3AiLCJtaWQiOiJhZHMifQ=="
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.flipkartPill}
+              >
+                Flipkart
+              </a>
+            </motion.div>
           </motion.div>
 
           <motion.div
