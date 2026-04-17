@@ -24,25 +24,40 @@ export async function POST(req: NextRequest) {
     }
 
     const awb = payload.awb || payload.awb_code || payload.shipment?.awb;
+    const shipmentId = payload.shipment_id?.toString() || payload.order_id?.toString();
     const current_status = payload.current_status || payload.status || payload.shipment?.status;
 
-    if (!awb || !current_status) {
+    if ((!awb && !shipmentId) || !current_status) {
       console.warn('[EXTERNAL WEBHOOK] Ignored Invalid Payload:', JSON.stringify(payload));
       return NextResponse.json({ success: true, warning: 'Invalid Payload Ignored' }, { status: 200 });
     }
 
     let internalStatus = current_status.toUpperCase();
     
-    // Normalize Shiprocket's arbitrary string values into our strict Database schema states
-    if (internalStatus.includes('RTO')) internalStatus = 'RTO';
-    if (internalStatus.includes('CANCEL')) internalStatus = 'CANCELLED';
+    // Indestructible dictionary translating chaotic Courier/Shiprocket strings to Bheeshma Organics strict states
+    if (internalStatus.includes('RTO') || internalStatus.includes('RETURN')) {
+      internalStatus = 'RTO';
+    } else if (internalStatus.includes('CANCEL')) {
+      internalStatus = 'CANCELLED';
+    } else if (internalStatus.includes('DELIVERED')) {
+      internalStatus = 'DELIVERED';
+    } else if (internalStatus.includes('OUT FOR DELIVERY')) {
+      internalStatus = 'OUT_FOR_DELIVERY';
+    } else if (internalStatus.includes('IN TRANSIT') || internalStatus.includes('SHIPPED') || internalStatus.includes('DISPATCH')) {
+      internalStatus = 'SHIPPED';
+    } else if (internalStatus.includes('READY') || internalStatus.includes('MANIFEST') || internalStatus.includes('PICKUP SCHEDULED')) {
+      internalStatus = 'READY_TO_SHIP';
+    } else if (internalStatus.includes('CONFIRM') || internalStatus.includes('PROCESS')) {
+      internalStatus = 'CONFIRMED';
+    }
 
+    // Match dynamically via AWB if tracking hook, or Shiprocket shipment_id if order hook
     await prisma.order.updateMany({
-      where: { awbCode: awb },
+      where: awb ? { awbCode: awb } : { shiprocketOrderId: shipmentId },
       data: { status: internalStatus }
     });
 
-    console.log(`[EXTERNAL WEBHOOK] Successfully Synced AWB ${awb} to DB Status: ${internalStatus}`);
+    console.log(`[EXTERNAL WEBHOOK] Successfully Synced to DB Status: ${internalStatus}`);
     return NextResponse.json({ success: true, message: 'AWB Synced' });
 
   } catch (error) {
