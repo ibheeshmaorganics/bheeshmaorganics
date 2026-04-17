@@ -28,9 +28,7 @@ export async function POST(req: NextRequest) {
     // Razorpay explicitly triggers 'order.paid' when the payment is fully captured natively
     if (event.event === 'order.paid') {
       const razorpayOrderId = event.payload.order.entity.id;
-
-      // Natively find the order using the Gateway's internal mapping (we must use receipt ID since we attached our DB orderId to receipt)
-      // Wait, in route.ts we passed options = { receipt: order.id, amount... }
+      const paymentId = event.payload.payment?.entity?.id;
       const dbOrderId = event.payload.order.entity.receipt;
 
       if (!dbOrderId) {
@@ -39,7 +37,11 @@ export async function POST(req: NextRequest) {
 
       await prisma.order.update({
         where: { id: dbOrderId },
-        data: { status: 'Processing', paymentStatus: 'paid' }
+        data: { 
+          status: 'Processing', 
+          paymentStatus: 'paid',
+          ...(paymentId && { paymentId })
+        }
       });
 
       console.log(`[WEBHOOK] Order ${dbOrderId} successfully marked as Paid via Razorpay Webhook`);

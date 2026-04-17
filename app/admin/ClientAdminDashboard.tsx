@@ -8,7 +8,7 @@ import 'react-confirm-alert/src/react-confirm-alert.css';
 import { toast } from 'sonner';
 
 interface Product { _id: string; name: string; price: number; discount?: number; quantity?: number; unit?: string; images?: string[]; imageUrl?: string; createdAt: string; description?: string; inStock?: boolean; variants?: any[]; }
-interface Order { _id: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; address: any; products: any[]; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; }
+interface Order { _id: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; address: any; products: any[]; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; }
 
 export default function ClientAdminDashboard({ initialProducts, initialOrders }: any) {
   const router = useRouter();
@@ -324,6 +324,34 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
     }
   };
 
+  const handleProcessRefund = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!editingOrder) return;
+    
+    if (confirm('Are you legally sure you want to process this refund? Money will be deducted from your corporate account instantly.')) {
+      setIsSubmitting(true);
+      try {
+        const res = await fetch('/api/orders/refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: editingOrder._id })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(data.message || 'Refund successfully processed');
+          setEditingOrder({ ...editingOrder, paymentStatus: 'refunded' });
+          fetchData();
+        } else {
+          toast.error(data.error || 'Failed to process refund');
+        }
+      } catch {
+        toast.error('Network Error processing refund');
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
   const handleLogout = () => {
     confirmAlert({
       title: 'Logout?',
@@ -532,8 +560,8 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                           {walletBalance !== null ? `₹${walletBalance.toLocaleString('en-IN')}` : 'Loading...'}
                         </span>
                       </div>
-                    </div>
 
+                    </div>
                   </div>
 
                 </motion.div>
@@ -561,7 +589,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                         </div>
                       )}
                       
-                      <fieldset disabled={Boolean(editingOrder.awbCode)} style={{ border: 'none', padding: 0, margin: 0, gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                      <fieldset style={{ border: 'none', padding: 0, margin: 0, gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                       {/* Customer Info Card */}
                       <div style={{ background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0', gridColumn: '1 / -1' }}>
                         <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
@@ -606,6 +634,19 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                               <option value="refunded">Refunded (Completed)</option>
                             </select>
                           </div>
+                          
+                          {/* Secure Refund Automation Block */}
+                          {(editingOrder.status === 'CANCELLED' || editingOrder.status === 'RTO') && 
+                           (editingOrder.paymentMethod !== 'Cash' && editingOrder.paymentMethod?.toLowerCase() !== 'cod') && 
+                           editingOrder.paymentStatus !== 'refunded' && (
+                            <div style={{ marginTop: '10px' }}>
+                              <button onClick={handleProcessRefund} disabled={isSubmitting || !editingOrder.paymentId} type="button" style={{ width: '100%', padding: '12px', background: '#ef4444', color: 'white', fontWeight: 800, border: 'none', borderRadius: '8px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                {isSubmitting ? 'Processing...' : 'Issue Automatic Refund'}
+                              </button>
+                            </div>
+                          )}
+
                         </div>
                       </div>
 
@@ -724,11 +765,9 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                         </ul>
                       </div>
 
-                      {!Boolean(editingOrder.awbCode) && (
-                        <button type="submit" disabled={isSubmitting} style={{ gridColumn: '1 / -1', marginTop: '10px', background: 'linear-gradient(to right, var(--color-primary), #16a34a)', color: 'white', border: 'none', padding: '16px 24px', borderRadius: '12px', fontWeight: 800, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '1.2rem', boxShadow: '0 10px 25px rgba(22, 163, 74, 0.4)', transition: 'all 0.2s', width: '100%' }}>
-                          {isSubmitting ? 'Saving Details...' : 'Save Changes'}
-                        </button>
-                      )}
+                      <button type="submit" disabled={isSubmitting} style={{ gridColumn: '1 / -1', marginTop: '10px', background: 'linear-gradient(to right, var(--color-primary), #16a34a)', color: 'white', border: 'none', padding: '16px 24px', borderRadius: '12px', fontWeight: 800, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '1.2rem', boxShadow: '0 10px 25px rgba(22, 163, 74, 0.4)', transition: 'all 0.2s', width: '100%' }}>
+                        {isSubmitting ? 'Saving Details...' : 'Save Changes'}
+                      </button>
                       </fieldset>
                     </form>
                   </div>

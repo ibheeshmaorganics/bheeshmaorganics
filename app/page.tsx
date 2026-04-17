@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import Marquee from 'react-fast-marquee';
 import styles from './page.module.css';
@@ -27,6 +28,7 @@ export default function Home() {
     <div className={styles.main}>
       {/* Hero Section */}
       <section className={styles.hero}>
+        <Image src="/images/hero_herbal_bg.png" alt="Herbal Landscape Background" fill priority sizes="100vw" style={{ objectFit: 'cover', zIndex: -1, pointerEvents: 'none' }} />
         <div className={styles.blob1}></div>
         <div className={styles.blob2}></div>
 

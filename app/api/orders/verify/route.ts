@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
         where: { id: orderId },
         data: { 
           status: 'Processing', 
-          paymentStatus: isCod ? 'cod (Advance Paid)' : 'paid' 
+          paymentStatus: isCod ? 'cod (Advance Paid)' : 'paid',
+          paymentId: razorpay_payment_id
         } // Set status to Processing/Paid natively
       });
 

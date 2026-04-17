@@ -276,7 +276,7 @@ export default function CheckoutPage() {
             {isOnline && (
               <div className={styles.totalRow} style={{ marginTop: '10px', fontSize: '1rem', color: '#16a34a' }}>
                 <span style={{ display: 'flex', flexDirection: 'column' }}>
-                  Online Payment Discount (7.5%)
+                  Online Payment Discount (10%)
                 </span>
                 <span>- ₹{discountAmount}</span>
               </div>
@@ -284,9 +284,9 @@ export default function CheckoutPage() {
             <div className={styles.totalRow} style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '15px', color: 'var(--color-tertiary)', fontSize: '1.4rem' }}>
               <span style={{ display: 'flex', flexDirection: 'column' }}>
                 Total to Pay Now
-                {!isOnline && <span style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '4px', maxWidth: '280px', lineHeight: 1.4 }}>₹75 advance payment securely required for COD orders to confirm shipping. Balance ₹{finalTotalAmount - 75} on delivery.</span>}
+                {!isOnline && <span style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '4px', maxWidth: '280px', lineHeight: 1.4 }}>₹99 advance payment securely required for COD orders to confirm shipping. Balance ₹{finalTotalAmount > 99 ? finalTotalAmount - 99 : 0} on delivery.</span>}
               </span>
-              <span>{isOnline ? `₹${finalTotalAmount}` : '₹75'}</span>
+              <span>{isOnline ? `₹${finalTotalAmount}` : '₹99'}</span>
             </div>
           </div>
 
