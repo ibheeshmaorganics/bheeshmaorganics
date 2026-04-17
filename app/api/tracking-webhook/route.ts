@@ -23,21 +23,26 @@ export async function POST(req: NextRequest) {
        return NextResponse.json({ success: true, message: 'Test Ping Acknowledged' });
     }
 
-    const { awb, current_status } = payload;
+    const awb = payload.awb || payload.awb_code || payload.shipment?.awb;
+    const current_status = payload.current_status || payload.status || payload.shipment?.status;
 
     if (!awb || !current_status) {
+      console.warn('[EXTERNAL WEBHOOK] Ignored Invalid Payload:', JSON.stringify(payload));
       return NextResponse.json({ success: true, warning: 'Invalid Payload Ignored' }, { status: 200 });
     }
 
-    let internalStatus = current_status;
-    if (internalStatus === 'RTO INITIATED' || internalStatus === 'RTO DELIVERED') internalStatus = 'RTO';
+    let internalStatus = current_status.toUpperCase();
+    
+    // Normalize Shiprocket's arbitrary string values into our strict Database schema states
+    if (internalStatus.includes('RTO')) internalStatus = 'RTO';
+    if (internalStatus.includes('CANCEL')) internalStatus = 'CANCELLED';
 
     await prisma.order.updateMany({
       where: { awbCode: awb },
       data: { status: internalStatus }
     });
 
-    console.log(`[EXTERNAL WEBHOOK] Syncing AWB ${awb} to Status: ${internalStatus}`);
+    console.log(`[EXTERNAL WEBHOOK] Successfully Synced AWB ${awb} to DB Status: ${internalStatus}`);
     return NextResponse.json({ success: true, message: 'AWB Synced' });
 
   } catch (error) {
