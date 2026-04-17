@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import { toast } from 'sonner';
 
 const styles: Record<string, string> = {
@@ -111,7 +112,7 @@ export default function ClientProductView({ product }: { product: any }) {
       <style dangerouslySetInnerHTML={{ __html: `
         .bo-container {
           min-height: 90vh;
-          background: var(--color-background);
+          background: transparent;
           padding: 120px 2rem 4rem 2rem;
           max-width: 1400px;
           margin: 0 auto;
@@ -120,10 +121,9 @@ export default function ClientProductView({ product }: { product: any }) {
           display: grid;
           grid-template-columns: 45% 55%;
           gap: 4rem;
-          background: white;
-          border-radius: 24px;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
-          padding: 3rem;
+          background: transparent;
+          box-shadow: none;
+          padding: 0;
           min-height: 600px;
         }
         .bo-imageSection {
@@ -338,6 +338,10 @@ export default function ClientProductView({ product }: { product: any }) {
           display: none;
         }
         @media (max-width: 960px) {
+          .bo-container {
+            padding: 100px 5% 2rem 5%;
+            width: 100%;
+          }
           .bo-desktop-only { display: none !important; }
           .bo-mobile-only { display: flex !important; flex-direction: column; width: 100%; position: relative; top: 0; }
           .bo-discountBadge {
@@ -346,8 +350,9 @@ export default function ClientProductView({ product }: { product: any }) {
           }
           .bo-grid {
             grid-template-columns: 1fr;
-            padding: 1.5rem;
+            padding: 0;
             gap: 2.5rem;
+            width: 100%;
           }
           .bo-imageSection {
             position: relative;
@@ -372,9 +377,9 @@ export default function ClientProductView({ product }: { product: any }) {
         }
       `}} />
     <div className={styles.container} style={{ overflowX: 'hidden', width: '100vw' }}>
-      <button onClick={() => router.push('/products')} style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <Link href="/products" prefetch={true} style={{ textDecoration: 'none', background: 'transparent', border: 'none', color: '#64748b', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', marginBottom: '20px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
         ← Back to Shop
-      </button>
+      </Link>
 
       <motion.div
         className={styles.grid}
@@ -548,9 +553,9 @@ export default function ClientProductView({ product }: { product: any }) {
                     <span className={styles.qtyNum}>{cartItem.quantity}</span>
                     <button onClick={() => updateQuantity(1)} className={`${styles.qtyBtn} ${styles.plus}`}>+</button>
                   </div>
-                  <button onClick={() => router.push('/checkout')} className={styles.addToCartBtn} style={{ background: '#10b981' }}>
+                  <Link href="/checkout" prefetch={true} className={styles.addToCartBtn} style={{ textDecoration: 'none', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     Proceed to Checkout →
-                  </button>
+                  </Link>
                 </>
               ) : (
                 <button onClick={handleAddToCart} className={styles.addToCartBtn}>

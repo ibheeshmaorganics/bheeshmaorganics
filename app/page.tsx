@@ -49,7 +49,7 @@ export default function Home() {
               From natural sourcing to carefully crafted products. Discover the power of Himalayan Sea Buckthorn, known for its nutritional benefits, antioxidant properties, and support for immunity.
             </motion.p>
             <motion.div variants={fadeUp} className={styles.ctaGroup}>
-              <Link href="/products" prefetch={true} className={`btn btn-primary ${styles.btnLarge}`}>Explore Products</Link>
+              <Link href="/products" prefetch={true} className={`btn btn-primary ${styles.btnLarge}`}>View Products</Link>
               <Link href="/about" prefetch={true} className={`btn ${styles.btnOutline}`}>Our Story</Link>
             </motion.div>
 

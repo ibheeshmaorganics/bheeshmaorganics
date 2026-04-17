@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.order.update({
       where: { id: orderId },
-      data: { paymentStatus: 'payment failed' }
+      data: { paymentStatus: 'payment failed', status: 'CANCELLED' }
     });
 
     return NextResponse.json({ success: true, message: 'Marked as payment failed' });

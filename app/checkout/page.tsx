@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import styles from './page.module.css';
 
@@ -9,6 +10,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [cartItems, setCartItems] = useState<any[]>([]);
+  const [showPopup, setShowPopup] = useState<{status: 'success'|'failed', message: string} | null>(null);
   const [formData, setFormData] = useState({
     customerName: '',
     phone: '',
@@ -53,7 +55,7 @@ export default function CheckoutPage() {
 
   const baseTotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const isOnline = formData.paymentMethod === 'Razorpay';
-  const discountAmount = isOnline ? Math.round(baseTotal * 0.075) : 0;
+  const discountAmount = isOnline ? Math.round(baseTotal * 0.10) : 0;
   const finalTotalAmount = baseTotal - discountAmount;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,10 +135,11 @@ export default function CheckoutPage() {
                 
                 if (verifyRes.ok) {
                   localStorage.removeItem('bheeshma_cart');
-                  toast.success('Secure Payment Confirmed! Redirecting...');
-                  router.replace(`/track?id=${formData.phone}`);
+                  setShowPopup({status: 'success', message: 'Order Placed Successfully! Thank you.'});
+                  setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
                 } else {
-                  toast.error('Payment Verification Failed: ' + verifyData.error);
+                  setShowPopup({status: 'failed', message: 'Payment Verification Failed.'});
+                  setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
                 }
               } catch (e) {
                 toast.error('Error verifying payment on server.');
@@ -154,7 +157,7 @@ export default function CheckoutPage() {
 
           const rzp = new (window as any).Razorpay(options);
           rzp.on('payment.failed', async function (response: any) {
-            toast.error('Payment Failed: ' + response.error.description);
+            setShowPopup({status: 'failed', message: 'Payment Failed: ' + response.error.description});
             try {
                await fetch('/api/orders/failed', {
                  method: 'POST',
@@ -162,18 +165,21 @@ export default function CheckoutPage() {
                  body: JSON.stringify({ orderId: data.orderId })
                });
             } catch (e) {}
+            setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
           });
           rzp.open();
         } else {
           localStorage.removeItem('bheeshma_cart');
-          toast.success('Order Placed Successfully! Redirecting...');
-          router.replace(`/track?id=${formData.phone}`);
+          setShowPopup({status: 'success', message: 'Order Placed Successfully! Thank you.'});
+          setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
         }
       } else {
-        toast.error('Payment / Order Failed: ' + data.error);
+        setShowPopup({status: 'failed', message: 'Order Failed: ' + data.error});
+        setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
       }
     } catch (err) {
-      toast.error('Error connecting to secure backend servers.');
+      setShowPopup({status: 'failed', message: 'Error connecting to secure backend servers.'});
+      setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
     } finally {
       if (formData.paymentMethod === 'Cash') {
          setLoading(false);
@@ -197,7 +203,7 @@ export default function CheckoutPage() {
           <p style={{ color: '#64748b', fontSize: '1.15rem', marginBottom: '2.5rem', lineHeight: '1.6' }}>Looks like you haven't added anything yet. Discover our premium herbal wellness collection today.</p>
           <button
             onClick={() => router.push('/products')}
-            style={{ width: '100%', padding: '18px', background: 'var(--color-tertiary)', color: 'white', borderRadius: '16px', fontWeight: '800', border: 'none', cursor: 'pointer', fontSize: '1.15rem', transition: 'all 0.3s', boxShadow: '0 10px 25px rgba(255, 152, 0, 0.3)' }}
+            style={{ display: 'block', width: '100%', padding: '18px', background: 'var(--color-tertiary)', color: 'white', borderRadius: '16px', fontWeight: '800', border: 'none', cursor: 'pointer', fontSize: '1.15rem', transition: 'all 0.3s', boxShadow: '0 10px 25px rgba(255, 152, 0, 0.3)', boxSizing: 'border-box' }}
             onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-3px)'}
             onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
@@ -213,14 +219,15 @@ export default function CheckoutPage() {
       <div className={styles.blobOrange}></div>
       <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10 }}>
         <div style={{ marginBottom: '1.5rem', alignSelf: 'flex-start' }}>
-          <button
-            onClick={() => router.push('/products')}
-            style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(255,255,255,0.5)', padding: '10px 24px', borderRadius: '30px', color: '#334155', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', backdropFilter: 'blur(10px)' }}
+          <Link
+            href="/products"
+            prefetch={true}
+            style={{ textDecoration: 'none', background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(255,255,255,0.5)', padding: '10px 24px', borderRadius: '30px', color: '#334155', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', backdropFilter: 'blur(10px)' }}
             onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-3px)'}
             onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
             <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>←</span> Back to Store
-          </button>
+          </Link>
         </div>
         <motion.div
           className={styles.checkoutCard}
@@ -306,14 +313,14 @@ export default function CheckoutPage() {
                     <input type="radio" name="paymentMethod" value="Cash" checked={formData.paymentMethod === 'Cash'} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontWeight: 'bold' }}>Cash on Delivery</span>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>₹75 advance payment required</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>₹99 advance payment required</span>
                     </div>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: formData.paymentMethod === 'Razorpay' ? '#dcfce7' : '#f8fafc', padding: '12px 20px', borderRadius: '12px', border: `2px solid ${formData.paymentMethod === 'Razorpay' ? '#22c55e' : '#e2e8f0'}`, flex: 1 }}>
                     <input type="radio" name="paymentMethod" value="Razorpay" checked={formData.paymentMethod === 'Razorpay'} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} />
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontWeight: 'bold' }}>Pay Online Securely</span>
-                      <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 'bold' }}>Get 7.5% OFF</span>
+                      <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 'bold' }}>Get 10% OFF</span>
                     </div>
                   </label>
                 </div>
@@ -326,6 +333,124 @@ export default function CheckoutPage() {
           </div>
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {showPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(12px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '20px'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 70, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: -70, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.95)',
+                padding: '0',
+                borderRadius: '32px',
+                textAlign: 'center',
+                maxWidth: '420px',
+                width: '100%',
+                boxShadow: '0 40px 80px -20px rgba(0,0,0,0.6)',
+                overflow: 'hidden',
+                position: 'relative'
+              }}
+            >
+              {/* Dynamic Header Gradient Array */}
+              <div style={{
+                height: '140px',
+                background: showPopup.status === 'success' 
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                  : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  top: '-50%',
+                  left: '-50%',
+                  width: '200%',
+                  height: '200%',
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 60%)'
+                }}></div>
+                
+                <motion.div 
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.2, type: 'spring', damping: 15 }}
+                  style={{
+                    width: '90px',
+                    height: '90px',
+                    background: 'white',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                    zIndex: 2
+                  }}
+                >
+                  {showPopup.status === 'success' ? (
+                    <svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  ) : (
+                    <svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  )}
+                </motion.div>
+              </div>
+
+              <div style={{ padding: '40px 30px' }}>
+                <h2 style={{ fontSize: '2rem', color: '#0f172a', marginBottom: '12px', fontWeight: '900', letterSpacing: '-0.5px' }}>
+                  {showPopup.status === 'success' ? 'Order Placed!' : 'Transaction Failed'}
+                </h2>
+                <p style={{ color: '#64748b', fontSize: '1.05rem', marginBottom: '30px', lineHeight: '1.6', fontWeight: '500' }}>
+                  {showPopup.message || (showPopup.status === 'success' 
+                    ? 'Your premium herbal products are now being prepared for secured dispatch.' 
+                    : 'We could not process your secure transaction. Please verify your details.')}
+                </p>
+                
+                <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', border: '1px solid #e2e8f0' }}>
+                   <div style={{ 
+                     width: '24px', 
+                     height: '24px', 
+                     border: `3px solid ${showPopup.status === 'success' ? '#10b981' : '#ef4444'}`, 
+                     borderTopColor: 'transparent', 
+                     borderRadius: '50%', 
+                     animation: 'spin 1s linear infinite' 
+                   }}></div>
+                   <span style={{ color: '#334155', fontWeight: '700', letterSpacing: '0.5px', fontSize: '0.95rem' }}>
+                     Routing securely...
+                   </span>
+                </div>
+              </div>
+              <style dangerouslySetInnerHTML={{__html: "@keyframes spin { 100% { transform: rotate(360deg); } }"}} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

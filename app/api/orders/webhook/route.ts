@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         if (dbOrderId) {
           await prisma.order.update({
              where: { id: dbOrderId },
-             data: { paymentStatus: 'payment failed' }
+             data: { paymentStatus: 'payment failed', status: 'CANCELLED' }
           });
           console.log(`[WEBHOOK] Order ${dbOrderId} marked as Payment Failed`);
         }

@@ -3,7 +3,7 @@ import prisma from '@/lib/db';
 
 export async function POST(req: Request) {
   try {
-    const { orderIds, dimensions, pickupDate } = await req.json();
+    const { orderIds, dimensions, pickupDate, courierId } = await req.json();
 
     if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
       return NextResponse.json({ error: 'No orders provided' }, { status: 400 });
@@ -109,20 +109,28 @@ export async function POST(req: Request) {
 
       // 4. Force AWB Generation to seal the package instantly
       try {
-        const awbRes = await fetch('https://apiv2.shiprocket.in/v1/external/courier/generate/awb', {
+        const awbRes = await fetch('https://apiv2.shiprocket.in/v1/external/courier/assign/awb', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ shipment_id: shipmentId })
+          body: JSON.stringify({ 
+            shipment_id: shipmentId,
+            ...(courierId && courierId !== '0' && courierId !== '' ? { courier_id: Number(courierId) } : {})
+          })
         });
         const awbData = await awbRes.json();
-        if (!awbRes.ok || !awbData.response?.data?.awb_code) {
-          const errMsg = awbData.message || (awbData.response && awbData.response.data) || 'Failed to auto-assign Courier. Might be low wallet balance or invalid Pin Code.';
-          failedAWBs.push({ orderId: id, reason: `Shiprocket Refused AWB: ${errMsg}` });
+        
+        let awbCode = awbData.response?.data?.awb_code;
+
+        // Shiprocket often returns 200 OK but sets status to 0 for logic failures
+        if (!awbRes.ok || awbData.awb_assign_status === 0 || !awbCode) {
+          const nestedErr = awbData.response?.data?.message || JSON.stringify(awbData.response?.data || awbData);
+          const errMsg = awbData.message || nestedErr || 'Failed to auto-assign Courier (Check wallet balance or serviceability)';
+          failedAWBs.push({ orderId: id, reason: `Shiprocket Refused AWB: ${(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg)).substring(0, 100)}` });
           continue; // Halt completely. Do not mark as Shipped!
         }
 
-        srAwb = awbData.response.data.awb_code;
-        srCourier = awbData.response.data.courier_name || srCourier;
+        srAwb = awbCode;
+        srCourier = awbData.response?.data?.courier_name || srCourier;
         trackingLink = `https://shiprocket.co/tracking/${srAwb}`; // Upgraded tracking URL
 
       } catch (e: any) {
@@ -148,7 +156,7 @@ export async function POST(req: Request) {
         await prisma.order.update({
           where: { id: id },
           data: {
-            status: 'Shipped',
+            status: 'READY_TO_SHIP',
             awbCode: srAwb,
             courierName: srCourier,
             trackingLink: trackingLink,

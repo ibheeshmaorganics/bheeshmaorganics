@@ -107,10 +107,24 @@ function TrackContent() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: idx * 0.1 }}
               >
-                <div className={styles.orderHeader} style={{ paddingBottom: '0.4rem', marginBottom: '0.4rem', borderBottom: '1px solid #e2e8f0' }}>
-                  <h3 style={{ fontSize: '1rem', margin: 0 }}>Order #{order._id.slice(-6).toUpperCase()}</h3>
-                  <span className={`${styles.statusBadge} ${styles[order.status.toLowerCase()]}`} style={{ padding: '2px 8px', fontSize: '0.7rem' }}>
-                    {(order.status === 'Pending' || order.status === 'Processing') ? 'Ordered' : order.status.replace('_', ' ')}
+                <div className={styles.orderHeader} style={{ paddingBottom: '0.4rem', marginBottom: '0.4rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 800, color: '#1e293b' }}>Order #{order._id.slice(-6).toUpperCase()}</h3>
+                  <span style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', borderRadius: '6px', letterSpacing: '0.5px', background: (order.status === 'CANCELLED' || order.status === 'RTO' || order.paymentStatus === 'payment failed') ? '#fee2e2' : ['SHIPPED', 'IN_TRANSIT', 'READY_TO_SHIP'].includes(order.status) ? '#dbeafe' : order.status === 'DELIVERED' ? '#dcfce7' : '#fef3c7', color: (order.status === 'CANCELLED' || order.status === 'RTO' || order.paymentStatus === 'payment failed') ? '#991b1b' : ['SHIPPED', 'IN_TRANSIT', 'READY_TO_SHIP'].includes(order.status) ? '#1e40af' : order.status === 'DELIVERED' ? '#166534' : '#92400e' }}>
+                    {(() => {
+                      if (order.paymentStatus === 'payment failed') return 'Payment Failed';
+                      if (order.paymentStatus === 'draft_intent') return 'Payment Processing';
+                      const s = order.status?.toUpperCase() || '';
+                      if (s === 'PENDING' || s === 'NEW') return 'Order Placed';
+                      if (s === 'PROCESSING' || s === 'CONFIRMED') return 'Order Confirmed';
+                      if (s === 'CANCELLED') return 'Order Cancelled';
+                      if (s === 'READY_TO_SHIP') return 'Ready to Ship';
+                      if (s === 'SHIPPED') return 'Shipped';
+                      if (s === 'OUT_FOR_DELIVERY') return 'Out for Delivery';
+                      if (s === 'DELIVERY_ATTEMPTED') return 'Delivery Attempted';
+                      if (s === 'DELIVERED') return 'Delivered';
+                      if (s === 'RTO') return 'Order Cancelled';
+                      return order.status.replace(/_/g, ' ');
+                    })()}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: '1.4' }}>
@@ -136,25 +150,40 @@ function TrackContent() {
                   <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '12px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                       <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Method</span>
-                      <span style={{ fontWeight: 800, color: order.paymentStatus?.toLowerCase().includes('cod') ? '#ea580c' : order.paymentStatus === 'paid' ? '#16a34a' : order.paymentStatus === 'payment failed' ? '#ef4444' : '#1e293b' }}>
-                        {order.paymentStatus?.toLowerCase().includes('cod') ? 'Cash on Delivery' : order.paymentStatus === 'paid' ? 'Online Payment (Paid)' : order.paymentStatus === 'payment failed' ? 'Payment Failed' : 'Payment Processing'}
+                      <span style={{ fontWeight: 800, color: order.paymentStatus?.toLowerCase().includes('cod') ? '#ea580c' : order.paymentStatus === 'refunded' ? '#10b981' : order.paymentStatus === 'refund initiated' ? '#f59e0b' : order.paymentStatus === 'paid' ? '#16a34a' : order.paymentStatus === 'payment failed' ? '#ef4444' : '#1e293b' }}>
+                        {order.paymentStatus?.toLowerCase().includes('cod') ? 'Cash on Delivery' : order.paymentStatus === 'refunded' ? 'Refunded (Completed)' : order.paymentStatus === 'refund initiated' ? 'Refund Initiated' : order.paymentStatus === 'paid' ? 'Online Payment (Paid)' : order.paymentStatus === 'payment failed' ? 'Payment Failed' : 'Payment Processing'}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                       <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order Total</span>
                       <span style={{ fontWeight: 800, color: order.paymentStatus === 'paid' ? '#16a34a' : '#1e293b' }}>₹{order.totalAmount}</span>
                     </div>
-                    {order.paymentStatus?.toLowerCase().includes('cod') && order.totalAmount > 75 && (
+                    {order.paymentStatus?.toLowerCase().includes('cod') && order.totalAmount > 99 && (
                       <>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#16a34a' }}>
                           <span style={{ fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Advance Paid</span>
-                          <span style={{ fontWeight: 800 }}>- ₹75</span>
+                          <span style={{ fontWeight: 800 }}>- ₹99</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', paddingTop: '10px', borderTop: '2px dashed #cbd5e1', color: '#ef4444', alignItems: 'center' }}>
                           <span style={{ fontWeight: 900, fontSize: '0.95rem', letterSpacing: '0.5px' }}>DUE ON DELIVERY</span>
-                          <span style={{ fontWeight: 900, fontSize: '1.25rem' }}>₹{order.totalAmount - 75}</span>
+                          <span style={{ fontWeight: 900, fontSize: '1.25rem' }}>₹{order.totalAmount - 99}</span>
                         </div>
                       </>
+                    )}
+
+                    {(order.status === 'CANCELLED' || order.status === 'RTO') && (
+                      <div style={{ marginTop: '12px', padding: '12px', background: '#fee2e2', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '0.9rem', color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Refund Information</h4>
+                        {order.status === 'CANCELLED' && order.paymentMethod !== 'Cash' && (
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d', fontWeight: 600 }}>Eligible for Full Refund: ₹{order.totalAmount}</p>
+                        )}
+                        {order.status === 'RTO' && order.paymentMethod !== 'Cash' && (
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d', fontWeight: 600 }}>Delivery Failed. Refund Eligible: ₹{order.totalAmount - 99} <span style={{ fontWeight: 400 }}>(₹99 courier fee deducted)</span></p>
+                        )}
+                        {(order.status === 'CANCELLED' || order.status === 'RTO') && order.paymentMethod === 'Cash' && (
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d', fontWeight: 600 }}>COD Advance of ₹99 is Non-Refundable.</p>
+                        )}
+                      </div>
                     )}
                   </div>
 

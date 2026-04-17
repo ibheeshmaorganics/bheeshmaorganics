@@ -83,8 +83,8 @@ export async function POST(req: NextRequest) {
           key_secret: process.env.RAZORPAY_KEY_SECRET,
         });
 
-        // For COD, advance payment is 75 rupees
-        const payAmount = body.paymentMethod === 'Cash' ? 75 : body.totalAmount;
+        // For COD, advance payment is 99 rupees
+        const payAmount = body.paymentMethod === 'Cash' ? 99 : body.totalAmount;
 
         const options = {
           amount: Math.round(payAmount * 100), // amount in paise

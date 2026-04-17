@@ -69,14 +69,14 @@ export default function AdminLogin() {
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center', 
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', 
+      background: 'linear-gradient(135deg, #064e3b 0%, #166534 100%)', 
       fontFamily: 'system-ui, sans-serif',
       position: 'relative',
       overflow: 'hidden'
     }}>
       {/* Decorative Blobs */}
-      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(16,185,129,0.15) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)' }}></div>
-      <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(245,158,11,0.1) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)' }}></div>
+      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(250,204,21,0.15) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)' }}></div>
+      <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(34,197,94,0.15) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)' }}></div>
 
       <motion.div 
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
@@ -95,8 +95,11 @@ export default function AdminLogin() {
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h2 style={{ color: '#fff', fontSize: '2rem', fontWeight: 800, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Admin Protocol</h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.95rem', margin: 0 }}>Secure Bheeshma Organics Access</p>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '3rem' }}>🌿</span>
+          </div>
+          <h2 style={{ color: '#fff', fontSize: '2.2rem', fontWeight: 800, margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Bheeshma Admin</h2>
+          <p style={{ color: '#bbf7d0', fontSize: '0.95rem', margin: 0 }}>Secure Management Portal</p>
         </div>
 
         {error && (

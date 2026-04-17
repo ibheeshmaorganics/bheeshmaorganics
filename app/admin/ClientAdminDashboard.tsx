@@ -28,11 +28,15 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [orderSearch, setOrderSearch] = useState('');
   const [orderPage, setOrderPage] = useState(1);
-  const [orderFilterTab, setOrderFilterTab] = useState('New Orders');
+  const [orderFilterTab, setOrderFilterTab] = useState('NEW');
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
   const [isShiprocketModalOpen, setIsShiprocketModalOpen] = useState(false);
   const [bulkDimensions, setBulkDimensions] = useState({ length: 15, width: 10, height: 10, weight: 1.5 });
   const [bulkPickupDate, setBulkPickupDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [bulkCourierId, setBulkCourierId] = useState<string>('10');
+  const [dynamicCouriers, setDynamicCouriers] = useState<any[]>([]);
+  const [isFetchingCouriers, setIsFetchingCouriers] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -112,9 +116,10 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
 
   const fetchData = async () => {
     try {
-      const [prodRes, ordRes] = await Promise.all([
+      const [prodRes, ordRes, walletRes] = await Promise.all([
         fetch('/api/products'),
-        fetch('/api/orders')
+        fetch('/api/orders'),
+        fetch('/api/shiprocket/balance').catch(() => null)
       ]);
 
       if (prodRes.status === 401 || ordRes.status === 401) {
@@ -126,8 +131,14 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
       const ordData = await ordRes.json();
 
       setProducts(prodData.products || []);
-      // Load all orders. Pending online orders are now valid due to Webhook async completion.
       setOrders(ordData.orders || []);
+
+      if (walletRes && walletRes.ok) {
+        const walletData = await walletRes.json().catch(() => null);
+        if (walletData && walletData.balance !== undefined) {
+          setWalletBalance(walletData.balance);
+        }
+      }
     } catch {
       // Ignore
     }
@@ -235,6 +246,29 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
     }
   };
 
+  useEffect(() => {
+    if (isShiprocketModalOpen && selectedOrders.size === 1) {
+      const orderId = Array.from(selectedOrders)[0];
+      setIsFetchingCouriers(true);
+      fetch('/api/shiprocket/serviceability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, weight: bulkDimensions.weight })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.couriers) {
+          setDynamicCouriers(data.couriers);
+          if (data.couriers.length > 0 && (bulkCourierId === '0' || bulkCourierId === '')) {
+             setBulkCourierId(data.couriers[0].id.toString());
+          }
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setIsFetchingCouriers(false));
+    }
+  }, [isShiprocketModalOpen, bulkDimensions.weight, selectedOrders]);
+
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const res = await fetch('/api/orders', {
@@ -277,7 +311,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
       });
       if (res.ok) {
         fetchData();
-        toast.success('Order details updated successfully (Tracking updated & Status saved)');
+        toast.success('Order details securely updated');
         setIsEditingOrder(false);
         setEditingOrder(null);
       } else {
@@ -485,9 +519,18 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                         <span style={{ color: '#64748b', fontWeight: 600 }}>Cash on Delivery (COD)</span>
                         <span style={{ fontWeight: 800, color: '#f59e0b' }}>{codCount} Orders</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px dashed #f1f5f9' }}>
                         <span style={{ color: '#64748b', fontWeight: 600 }}>Total Active Products</span>
                         <span style={{ fontWeight: 800, color: '#1e293b' }}>{products.length} Products</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#1e40af', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+                          Shiprocket Wallet
+                        </span>
+                        <span style={{ fontWeight: 800, color: walletBalance !== null && walletBalance < 500 ? '#ef4444' : '#10b981' }}>
+                          {walletBalance !== null ? `₹${walletBalance.toLocaleString('en-IN')}` : 'Loading...'}
+                        </span>
                       </div>
                     </div>
 
@@ -507,97 +550,186 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                       <button onClick={() => setIsEditingOrder(false)} style={{ color: '#1e293b', background: '#e2e8f0', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Back</button>
                     </div>
 
-                    <form onSubmit={handleUpdateOrderDetails}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Customer Name</label>
-                          <input required type="text" className={styles.inputField} value={editingOrder.customerName} onChange={e => setEditingOrder({ ...editingOrder, customerName: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Phone</label>
-                          <input required type="text" className={styles.inputField} value={editingOrder.phone} onChange={e => setEditingOrder({ ...editingOrder, phone: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Email</label>
-                          <input required type="email" className={styles.inputField} value={editingOrder.email} onChange={e => setEditingOrder({ ...editingOrder, email: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Payment Method</label>
-                          <input type="text" className={styles.inputField} value={editingOrder.paymentMethod || 'Cash'} onChange={e => setEditingOrder({ ...editingOrder, paymentMethod: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Payment Status</label>
-                          <select className={styles.inputField} value={editingOrder.paymentStatus || 'cod'} onChange={e => setEditingOrder({ ...editingOrder, paymentStatus: e.target.value })}>
-                            <option value="cod">Cash on Delivery (COD)</option>
-                            <option value="payment processing/pending">Payment Processing/Pending</option>
-                            <option value="paid">Paid</option>
-                            <option value="payment failed">Payment Failed</option>
-                          </select>
-                        </div>
-
-                        <div style={{ gridColumn: '1 / -1' }}>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Shipping Address (City, State, PIN, Street)</label>
-                          <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                            <input type="text" required placeholder="Street" className={styles.inputField} value={editingOrder.address?.street || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, street: e.target.value } })} />
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                              <input type="text" required placeholder="City" style={{ flex: 1 }} className={styles.inputField} value={editingOrder.address?.city || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, city: e.target.value } })} />
-                              <input type="text" required placeholder="State" style={{ flex: 1 }} className={styles.inputField} value={editingOrder.address?.state || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, state: e.target.value } })} />
-                              <input type="text" required placeholder="PIN Code" style={{ flex: 1 }} className={styles.inputField} value={editingOrder.address?.pinCode || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, pinCode: e.target.value } })} />
-                            </div>
+                    <form onSubmit={handleUpdateOrderDetails} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                      {Boolean(editingOrder.awbCode) && (
+                        <div style={{ gridColumn: '1 / -1', background: '#e0f2fe', padding: '16px', borderRadius: '10px', border: '1px solid #bae6fd', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                          <div>
+                            <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', fontWeight: 800 }}>Order Locked by Automated Sync</h4>
+                            <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.4' }}>This order has been dispatched via Shiprocket (AWB Generated). Core details and lifecycle statuses are now updated dynamically via backend API automation to prevent desynchronization.</p>
                           </div>
                         </div>
-
-                        <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                          <h4 style={{ marginBottom: '10px', fontSize: '1.1rem' }}>Shipment Details</h4>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Courier Partner</label>
-                          <input type="text" placeholder="e.g. DTDC, BlueDart" className={styles.inputField} value={editingOrder.courierName || ''} onChange={e => setEditingOrder({ ...editingOrder, courierName: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Tracking ID (AWB Code)</label>
-                          <input type="text" placeholder="e.g. SHIP1234567" className={styles.inputField} value={editingOrder.awbCode || ''} onChange={e => setEditingOrder({ ...editingOrder, awbCode: e.target.value, status: e.target.value && editingOrder.status === 'Pending' ? 'Shipped' : editingOrder.status })} />
-                          <small style={{ color: '#64748b' }}>Adding tracking ID will automatically suggest "Shipped" status.</small>
-                        </div>
-                        <div style={{ gridColumn: '1 / -1' }}>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Order Tracking Link</label>
-                          <input type="url" placeholder="https://tracking.link/url..." className={styles.inputField} value={editingOrder.trackingLink || ''} onChange={e => setEditingOrder({ ...editingOrder, trackingLink: e.target.value })} />
-                        </div>
-                        <div style={{ gridColumn: '1 / -1' }}>
-                          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 600 }}>Order Status</label>
-                          <select className={styles.inputField} value={editingOrder.status} onChange={e => setEditingOrder({ ...editingOrder, status: e.target.value })}>
-                            <option value="Pending">Pending</option>
-                            <option value="Processing">Processing</option>
-                            <option value="Shipped">Shipped</option>
-                            <option value="Delivered">Delivered</option>
-                            <option value="Cancelled">Cancelled</option>
-                          </select>
+                      )}
+                      
+                      <fieldset disabled={Boolean(editingOrder.awbCode)} style={{ border: 'none', padding: 0, margin: 0, gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                      {/* Customer Info Card */}
+                      <div style={{ background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0', gridColumn: '1 / -1' }}>
+                        <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                          Customer Identity
+                        </h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>Full Name</label>
+                            <input required type="text" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.customerName} onChange={e => setEditingOrder({ ...editingOrder, customerName: e.target.value })} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>Phone Number</label>
+                            <input required type="text" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.phone} onChange={e => setEditingOrder({ ...editingOrder, phone: e.target.value })} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>Email Address</label>
+                            <input required type="email" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.email} onChange={e => setEditingOrder({ ...editingOrder, email: e.target.value })} />
+                          </div>
                         </div>
                       </div>
 
-                      <div style={{ marginTop: '20px', padding: '15px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <h4 style={{ marginBottom: '10px' }}>
-                          Purchased Products (Total: ₹{editingOrder.totalAmount})
-                          {(editingOrder.paymentMethod === 'Cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod' || editingOrder.paymentStatus?.toLowerCase().includes('cod')) && editingOrder.totalAmount > 75 && (
-                            <span style={{ color: '#ef4444', marginLeft: '10px', fontSize: '1rem', fontWeight: 700 }}>
-                              (To Collect: ₹{editingOrder.totalAmount - 75})
-                            </span>
-                          )}
+                      {/* Payment & Status Card */}
+                      <div style={{ background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                          Transaction Details
                         </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Payment Method</label>
+                            <input type="text" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.paymentMethod || 'Cash'} onChange={e => setEditingOrder({ ...editingOrder, paymentMethod: e.target.value })} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Financial Status</label>
+                            <select className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.paymentStatus || 'cod'} onChange={e => setEditingOrder({ ...editingOrder, paymentStatus: e.target.value })}>
+                              <option value="cod">Cash on Delivery (COD)</option>
+                              <option value="payment processing/pending">Payment Processing/Pending</option>
+                              <option value="paid">Pre-Paid</option>
+                              <option value="payment failed">Payment Failed</option>
+                              <option value="refund initiated">Refund Initiated</option>
+                              <option value="refunded">Refunded (Completed)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Operational Status */}
+                      <div style={{ background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                          Fulfillment Action
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Order Lifecycle Stage</label>
+                            <select className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.status} onChange={e => setEditingOrder({ ...editingOrder, status: e.target.value })}>
+                              <option value="NEW">🚀 NEW - Unconfirmed</option>
+                              <option value="CONFIRMED">📦 CONFIRMED - Start Packing</option>
+                              <option value="READY_TO_SHIP">🏷️ READY TO SHIP - Generate AWB</option>
+                              <option value="SHIPPED">🚚 SHIPPED - In Transit</option>
+                              <option value="IN_TRANSIT">🔄 IN TRANSIT - Wait</option>
+                              <option value="DELIVERED">✅ DELIVERED - Completed</option>
+                              <option value="RTO">❌ RTO - Return to Origin</option>
+                              <option value="CANCELLED">🛑 CANCELLED - Voided</option>
+                              <option value="Pending" style={{ display: 'none' }}>Pending</option>
+                              <option value="Processing" style={{ display: 'none' }}>Processing</option>
+                              <option value="Shipped" style={{ display: 'none' }}>Shipped</option>
+                              <option value="Delivered" style={{ display: 'none' }}>Delivered</option>
+                              <option value="Cancelled" style={{ display: 'none' }}>Cancelled</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Shiprocket Data */}
+                      <div style={{ gridColumn: '1 / -1', background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <h4 style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', margin: 0 }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+                            Tracking Information
+                          </h4>
+                          <span style={{ background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', fontSize: '0.7rem', padding: '3px 8px', borderRadius: '10px', fontWeight: 800, letterSpacing: '0.5px' }}>MANUAL OVERRIDE</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                           <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Courier Partner</label>
+                            <input type="text" placeholder="Auto-populated" className={styles.inputField} style={{ background: '#fff', color: '#1e293b', margin: 0, fontWeight: 600 }} value={editingOrder.courierName || ''} onChange={e => setEditingOrder({ ...editingOrder, courierName: e.target.value })} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>AWB Master Code</label>
+                            <input type="text" placeholder="Pending Generation..." className={styles.inputField} style={{ background: '#fff', color: '#1e293b', margin: 0, fontWeight: 600 }} value={editingOrder.awbCode || ''} onChange={e => setEditingOrder({ ...editingOrder, awbCode: e.target.value })} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Shipping Address */}
+                      <div style={{ gridColumn: '1 / -1', background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                          <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            Delivery Address
+                          </h4>
+                          <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                            <input type="text" required placeholder="Street / Area" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.address?.street || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, street: e.target.value } })} />
+                            <div style={{ display: 'flex', gap: '15px' }}>
+                              <input type="text" required placeholder="City" style={{ flex: 1, background: '#fff', margin: 0 }} className={styles.inputField} value={editingOrder.address?.city || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, city: e.target.value } })} />
+                              <input type="text" required placeholder="State" style={{ flex: 1, background: '#fff', margin: 0 }} className={styles.inputField} value={editingOrder.address?.state || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, state: e.target.value } })} />
+                              <input type="text" required placeholder="PIN Code" style={{ flex: 1, background: '#fff', margin: 0 }} className={styles.inputField} value={editingOrder.address?.pinCode || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, pinCode: e.target.value } })} />
+                            </div>
+                          </div>
+                      </div>
+
+                      {/* Order Products Manifest */}
+                      <div style={{ gridColumn: '1 / -1', padding: '20px', background: '#fff', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                          <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', margin: 0, color: '#1e293b' }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                            Order Manifest
+                          </h4>
+                          <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#10b981' }}>Total: ₹{editingOrder.totalAmount}</div>
+                        </div>
+                        
+                        {(editingOrder.paymentMethod === 'Cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod' || editingOrder.paymentStatus?.toLowerCase().includes('cod')) && editingOrder.totalAmount > 99 && (
+                           <div style={{ marginBottom: '15px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                             <span>🚨 COD Shipment Mode Active</span>
+                             <span style={{ fontSize: '1.1rem', fontWeight: 900 }}>Amount To Collect via Hub: ₹{editingOrder.totalAmount - 99}</span>
+                           </div>
+                        )}
+
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                           {editingOrder.products?.map((item: any, i: number) => (
-                            <li key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i !== editingOrder.products.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
-                              <span>{item.quantity}x {item.productId?.name || 'Unknown Product'}</span>
-                              <span style={{ fontWeight: 600 }}>₹{item.price * item.quantity}</span>
+                            <li key={i} style={{ padding: '15px', background: '#f8fafc', borderRadius: '8px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0' }}>
+                              <div style={{ fontWeight: 700, color: '#334155', fontSize: '0.95rem' }}>{item.productId?.name || 'Unknown Product'}</div>
+                              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Quantity</label>
+                                  <input type="number" min="1" className={styles.inputField} style={{ background: '#fff', padding: '8px', margin: 0, width: '100%' }} value={item.quantity} onChange={(e) => {
+                                    const newProducts = [...(editingOrder.products || [])];
+                                    newProducts[i] = { ...newProducts[i], quantity: Number(e.target.value) };
+                                    const newTotal = newProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+                                    setEditingOrder({ ...editingOrder, products: newProducts, totalAmount: newTotal });
+                                  }} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Unit Price (₹)</label>
+                                  <input type="number" min="0" className={styles.inputField} style={{ background: '#fff', padding: '8px', margin: 0, width: '100%' }} value={item.price} onChange={(e) => {
+                                    const newProducts = [...(editingOrder.products || [])];
+                                    newProducts[i] = { ...newProducts[i], price: Number(e.target.value) };
+                                    const newTotal = newProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+                                    setEditingOrder({ ...editingOrder, products: newProducts, totalAmount: newTotal });
+                                  }} />
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginLeft: 'auto', minWidth: '80px' }}>
+                                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Subtotal</label>
+                                  <span style={{ fontWeight: 900, color: '#1e293b', fontSize: '1.1rem' }}>₹{item.price * item.quantity}</span>
+                                </div>
+                              </div>
                             </li>
                           ))}
                         </ul>
                       </div>
 
-                      <button type="submit" disabled={isSubmitting} style={{ marginTop: '20px', background: 'var(--color-primary)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 600, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '1rem', width: '100%' }}>
-                        {isSubmitting ? 'Saving...' : 'Save All Changes & Make Shipment'}
-                      </button>
+                      {!Boolean(editingOrder.awbCode) && (
+                        <button type="submit" disabled={isSubmitting} style={{ gridColumn: '1 / -1', marginTop: '10px', background: 'linear-gradient(to right, var(--color-primary), #16a34a)', color: 'white', border: 'none', padding: '16px 24px', borderRadius: '12px', fontWeight: 800, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '1.2rem', boxShadow: '0 10px 25px rgba(22, 163, 74, 0.4)', transition: 'all 0.2s', width: '100%' }}>
+                          {isSubmitting ? 'Saving Details...' : 'Save Changes'}
+                        </button>
+                      )}
+                      </fieldset>
                     </form>
                   </div>
                 ) : (() => {
@@ -611,18 +743,30 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                   const filteredOrders = orders.filter(o => {
                     if (o.paymentStatus === 'draft_intent') return false;
 
-                    if (orderFilterTab === 'New Orders') {
-                      if (o.status !== 'Pending' && o.status !== 'Processing') return false;
-                    } else if (orderFilterTab !== 'All' && o.status !== orderFilterTab) {
-                      return false;
-                    }
-                    const searchLower = orderSearch.toLowerCase();
+                    const searchLower = orderSearch.toLowerCase().replace(/#/g, '').trim();
                     const dateString = new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase();
-                    return o._id.toLowerCase().includes(searchLower) ||
+                    const matchesSearch = o._id.toLowerCase().includes(searchLower) ||
                       o.customerName.toLowerCase().includes(searchLower) ||
                       o.phone.toLowerCase().includes(searchLower) ||
                       o.email.toLowerCase().includes(searchLower) ||
                       dateString.includes(searchLower);
+
+                    if (!matchesSearch) return false;
+
+                    // If the admin is actively searching, show matching orders from ALL statuses
+                    if (searchLower.trim() !== '') return true;
+
+                    if (orderFilterTab === 'All') return true;
+                    if (orderFilterTab === 'NEW') return o.status === 'Pending' || o.status === 'NEW';
+                    if (orderFilterTab === 'CONFIRMED') return o.status === 'Processing' || o.status === 'CONFIRMED';
+                    if (orderFilterTab === 'READY_TO_SHIP') return o.status === 'READY_TO_SHIP';
+                    if (orderFilterTab === 'SHIPPED') return o.status === 'Shipped' || o.status === 'SHIPPED';
+                    if (orderFilterTab === 'IN_TRANSIT') return o.status === 'IN_TRANSIT';
+                    if (orderFilterTab === 'DELIVERED') return o.status === 'Delivered' || o.status === 'DELIVERED';
+                    if (orderFilterTab === 'RTO') return o.status === 'RTO';
+                    if (orderFilterTab === 'CANCELLED') return o.status === 'Cancelled' || o.status === 'CANCELLED';
+
+                    return false;
                   });
                   const ITEMS_PER_PAGE = 10;
                   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ITEMS_PER_PAGE));
@@ -645,13 +789,20 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                     <div>
                       {/* Modern Sub-Navigation */}
                       <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', padding: '10px', background: 'white', borderRadius: '12px', overflowX: 'auto', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-                        {['New Orders', 'Shipped', 'Delivered', 'Cancelled', 'All'].map(t => {
+                        {['NEW', 'CONFIRMED', 'READY_TO_SHIP', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RTO', 'CANCELLED', 'All'].map(t => {
                           const isActive = orderFilterTab === t;
                           const count = orders.filter(o => {
                             if (o.paymentStatus === 'draft_intent') return false;
                             if (t === 'All') return true;
-                            if (t === 'New Orders') return o.status === 'Pending' || o.status === 'Processing';
-                            return o.status === t;
+                            if (t === 'NEW') return o.status === 'Pending' || o.status === 'NEW';
+                            if (t === 'CONFIRMED') return o.status === 'Processing' || o.status === 'CONFIRMED';
+                            if (t === 'READY_TO_SHIP') return o.status === 'READY_TO_SHIP';
+                            if (t === 'SHIPPED') return o.status === 'Shipped' || o.status === 'SHIPPED';
+                            if (t === 'IN_TRANSIT') return o.status === 'IN_TRANSIT';
+                            if (t === 'DELIVERED') return o.status === 'Delivered' || o.status === 'DELIVERED';
+                            if (t === 'RTO') return o.status === 'RTO';
+                            if (t === 'CANCELLED') return o.status === 'Cancelled' || o.status === 'CANCELLED';
+                            return false;
                           }).length;
 
                           return (
@@ -688,12 +839,71 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                             placeholder="Search orders by ID, Name, Phone, Date..."
                             className={styles.inputField}
                             value={orderSearch}
-                            onChange={e => { setOrderSearch(e.target.value); setOrderPage(1); }}
+                            onChange={e => { 
+                              const val = e.target.value;
+                              setOrderSearch(val); 
+                              setOrderPage(1); 
+                              
+                              const searchLower = val.toLowerCase().replace(/#/g, '').trim();
+                              if (searchLower !== '') {
+                                const matchingOrders = orders.filter(o => 
+                                   o._id.toLowerCase().includes(searchLower) || 
+                                   o.phone.toLowerCase().includes(searchLower)
+                                );
+                                if (matchingOrders.length === 1) {
+                                  const status = matchingOrders[0].status;
+                                  let newTab = 'All';
+                                  if (status === 'Pending' || status === 'NEW') newTab = 'NEW';
+                                  else if (status === 'Processing' || status === 'CONFIRMED') newTab = 'CONFIRMED';
+                                  else if (status === 'READY_TO_SHIP') newTab = 'READY_TO_SHIP';
+                                  else if (status === 'Shipped' || status === 'SHIPPED') newTab = 'SHIPPED';
+                                  else if (status === 'IN_TRANSIT') newTab = 'IN_TRANSIT';
+                                  else if (status === 'Delivered' || status === 'DELIVERED') newTab = 'DELIVERED';
+                                  else if (status === 'RTO') newTab = 'RTO';
+                                  else if (status === 'Cancelled' || status === 'CANCELLED') newTab = 'CANCELLED';
+                                  
+                                  setOrderFilterTab(newTab);
+                                }
+                              }
+                            }}
                           />
                         </div>
 
+                        <div style={{ padding: '8px 16px', background: walletBalance !== null && walletBalance < 500 ? '#fef2f2' : '#f0fdf4', borderRadius: '10px', border: `1px solid ${walletBalance !== null && walletBalance < 500 ? '#fecaca' : '#bbf7d0'}`, display: 'flex', alignItems: 'center', gap: '10px', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: '0.8rem', color: walletBalance !== null && walletBalance < 500 ? '#991b1b' : '#166534', fontWeight: 600, letterSpacing: '0.5px' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ verticalAlign: 'text-bottom', marginRight: '4px' }}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+                            SHIPROCKET
+                          </span>
+                          <span style={{ fontSize: '1.05rem', fontWeight: 800, color: walletBalance !== null && walletBalance < 500 ? '#dc2626' : '#15803d' }}>
+                            {walletBalance !== null ? `₹${walletBalance.toLocaleString('en-IN')}` : '...'}
+                          </span>
+                        </div>
+
                         <AnimatePresence>
-                          {selectedOrders.size > 0 && Array.from(selectedOrders).every(id => orders.find(o => o._id === id)?.status === 'Shipped') && (
+                          {selectedOrders.size > 0 && Array.from(selectedOrders).every(id => ['NEW'].includes(orders.find(o => o._id === id)?.status?.toUpperCase() || '')) && (
+                            <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={() => {
+                               let count = 0;
+                               toast.promise(
+                                 Promise.all(Array.from(selectedOrders).map(id => fetch('/api/orders', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: id, status: 'CONFIRMED' }) }).then(()=>count++))),
+                                 {
+                                   loading: 'Confirming orders...',
+                                   success: () => { fetchData(); setSelectedOrders(new Set()); return `Confirmed ${count} order(s) successfully!`; },
+                                   error: 'Failed to confirm orders.'
+                                 }
+                               );
+                            }} style={{ background: '#10b981', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}>
+                              ✅ Confirm Orders ({selectedOrders.size})
+                            </motion.button>
+                          )}
+
+                          {selectedOrders.size > 0 && Array.from(selectedOrders).every(id => ['CONFIRMED'].includes(orders.find(o => o._id === id)?.status?.toUpperCase() || '')) && (
+                            <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={() => setIsShiprocketModalOpen(true)} style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)' }}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+                              Ship via Shiprocket ({selectedOrders.size})
+                            </motion.button>
+                          )}
+
+                          {selectedOrders.size > 0 && Array.from(selectedOrders).every(id => ['READY_TO_SHIP', 'SHIPPED'].includes(orders.find(o => o._id === id)?.status?.toUpperCase() || '')) && (
                             <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={() => {
                               toast.promise(
                                 fetch('/api/shiprocket/label', {
@@ -715,12 +925,6 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                               );
                             }} style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)' }}>
                               🖨️ Print Labels ({selectedOrders.size})
-                            </motion.button>
-                          )}
-                          {selectedOrders.size > 0 && !Array.from(selectedOrders).every(id => orders.find(o => o._id === id)?.status === 'Shipped') && (
-                            <motion.button initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} onClick={() => setIsShiprocketModalOpen(true)} style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(245, 158, 11, 0.3)' }}>
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
-                              Ship via Shiprocket ({selectedOrders.size})
                             </motion.button>
                           )}
                         </AnimatePresence>
@@ -792,10 +996,11 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                                         display: 'inline-block',
                                         padding: '4px 10px',
                                         borderRadius: '6px',
-                                        background: o.status === 'Delivered' ? '#dcfce7' : o.status === 'Cancelled' ? '#fee2e2' : o.status === 'Shipped' ? '#dbeafe' : '#fef3c7',
-                                        color: o.status === 'Delivered' ? '#166534' : o.status === 'Cancelled' ? '#991b1b' : o.status === 'Shipped' ? '#1e40af' : '#92400e',
+                                        background: (o.status === 'DELIVERED' || o.status === 'Delivered') ? '#dcfce7' : (o.status === 'CANCELLED' || o.status === 'Cancelled' || o.status === 'RTO') ? '#fee2e2' : (o.status === 'SHIPPED' || o.status === 'Shipped' || o.status === 'IN_TRANSIT' || o.status === 'READY_TO_SHIP') ? '#dbeafe' : '#fef3c7',
+                                        color: (o.status === 'DELIVERED' || o.status === 'Delivered') ? '#166534' : (o.status === 'CANCELLED' || o.status === 'Cancelled' || o.status === 'RTO') ? '#991b1b' : (o.status === 'SHIPPED' || o.status === 'Shipped' || o.status === 'IN_TRANSIT' || o.status === 'READY_TO_SHIP') ? '#1e40af' : '#92400e',
                                         fontSize: '0.8rem',
-                                        fontWeight: 600
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase'
                                       }}>
                                         {o.status}
                                       </span>
@@ -838,72 +1043,124 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                       <AnimatePresence>
                         {isShiprocketModalOpen && (
                           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-                            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} style={{ background: 'white', padding: '30px', borderRadius: '16px', color: '#1e293b', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} style={{ background: '#ffffff', borderRadius: '16px', maxWidth: '550px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', overflow: 'hidden' }}>
+                              
+                              {/* Modal Header */}
+                              <div style={{ background: 'linear-gradient(135deg, #0ea5e9, #2563eb)', padding: '24px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                  <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                                  <h3 style={{ margin: 0, fontSize: '1.4rem', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 800 }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
                                     Shiprocket Dispatch
                                   </h3>
-                                  <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>Generate AWBs for {selectedOrders.size} selected orders.</p>
+                                  <p style={{ margin: '6px 0 0 0', color: '#bae6fd', fontSize: '0.9rem', fontWeight: 500 }}>Generating live AWBs to queue {selectedOrders.size} order(s).</p>
                                 </div>
-                                <button onClick={() => setIsShiprocketModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#94a3b8', cursor: 'pointer' }}>&times;</button>
+                                <button onClick={() => setIsShiprocketModalOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
                               </div>
-                              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '15px', paddingBottom: '5px', marginBottom: '20px' }}>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginBottom: '10px', textTransform: 'uppercase' }}>Package Details (per order)</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
-                                  <div>
-                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Weight (kg)</label>
-                                    <input type="number" step="0.1" value={bulkDimensions.weight} onChange={e => setBulkDimensions({ ...bulkDimensions, weight: parseFloat(e.target.value) || 1 })} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+
+                              <div style={{ padding: '30px' }}>
+                                
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                  {/* Dimensions Card */}
+                                  <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                    <h4 style={{ margin: '0 0 15px 0', color: '#334155', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="12 2 12 7"></polyline></svg>
+                                      Volumetric Mapping
+                                    </h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '15px' }}>
+                                      <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Weight (kg)</label>
+                                        <input type="number" step="0.1" value={bulkDimensions.weight} onChange={e => setBulkDimensions({ ...bulkDimensions, weight: parseFloat(e.target.value) })} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.95rem' }} />
+                                      </div>
+                                      <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>L × W × H (cm)</label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                          <input type="number" value={bulkDimensions.length} onChange={e => setBulkDimensions({ ...bulkDimensions, length: parseInt(e.target.value) })} style={{ width: '33%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', textAlign: 'center', fontSize: '0.95rem' }} />
+                                          <input type="number" value={bulkDimensions.width} onChange={e => setBulkDimensions({ ...bulkDimensions, width: parseInt(e.target.value) })} style={{ width: '33%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', textAlign: 'center', fontSize: '0.95rem' }} />
+                                          <input type="number" value={bulkDimensions.height} onChange={e => setBulkDimensions({ ...bulkDimensions, height: parseInt(e.target.value) })} style={{ width: '33%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', textAlign: 'center', fontSize: '0.95rem' }} />
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>L × W × H (cm)</label>
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                      <input type="number" value={bulkDimensions.length} onChange={e => setBulkDimensions({ ...bulkDimensions, length: parseInt(e.target.value) || 10 })} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center' }} />
-                                      <input type="number" value={bulkDimensions.width} onChange={e => setBulkDimensions({ ...bulkDimensions, width: parseInt(e.target.value) || 10 })} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center' }} />
-                                      <input type="number" value={bulkDimensions.height} onChange={e => setBulkDimensions({ ...bulkDimensions, height: parseInt(e.target.value) || 10 })} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center' }} />
+
+                                  {/* Logistics Routing */}
+                                  <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                    <h4 style={{ margin: '0 0 15px 0', color: '#334155', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800 }}>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
+                                      Logistics Routing
+                                    </h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                      <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Schedule Pickup</label>
+                                        <input type="date" value={bulkPickupDate} onChange={e => setBulkPickupDate(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.95rem' }} />
+                                      </div>
+                                      <div>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Courier Assignment</label>
+                                        {isFetchingCouriers ? (
+                                           <div style={{ padding: '10px 12px', borderRadius: '8px', border: '2px solid #cbd5e1', background: '#f8fafc', fontSize: '0.95rem', fontWeight: 600, color: '#64748b' }}>
+                                              ↻ Fetching Live Rates...
+                                           </div>
+                                        ) : dynamicCouriers.length > 0 ? (
+                                          <select value={bulkCourierId} onChange={e => setBulkCourierId(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '2px solid #3b82f6', background: '#eff6ff', fontSize: '0.95rem', fontWeight: 600, color: '#1e3a8a', cursor: 'pointer', outline: 'none' }}>
+                                            {dynamicCouriers.map(c => (
+                                              <option key={c.id} value={c.id.toString()}>
+                                                {c.name} - ₹{c.rate} 
+                                              </option>
+                                            ))}
+                                          </select>
+                                        ) : (
+                                          <select value={bulkCourierId} onChange={e => setBulkCourierId(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '2px solid #3b82f6', background: '#eff6ff', fontSize: '0.95rem', fontWeight: 600, color: '#1e3a8a', cursor: 'pointer', outline: 'none' }}>
+                                            <option value="10">Delhivery Surface</option>
+                                            <option value="1">Delhivery Air</option>
+                                            <option value="43">BlueDart</option>
+                                            <option value="2">XpressBees</option>
+                                            <option value="3">Ecom Express</option>
+                                            <option value="14">DTDC</option>
+                                            <option value="60">Amazon Shipping</option>
+                                          </select>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                                <div style={{ marginTop: '15px' }}>
-                                  <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Schedule Pickup Date</label>
-                                  <input type="date" value={bulkPickupDate} onChange={e => setBulkPickupDate(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                                  <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.75rem' }}>Shiprocket will automatically assign the best delivery partner (Bluedart, Delhivery, etc.) based on pincode & weight.</p>
+
+                                <div style={{ marginTop: '25px', padding: '16px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '12px', color: '#065f46', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, color: '#10b981' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                  <div><strong style={{ fontWeight: 800 }}>LIVE WEBSOCKET:</strong> This will instantly sync the pickup, assign tracking links to the customer side, and prepare printing labels.</div>
                                 </div>
-                              </div>
-                              <div style={{ marginBottom: '20px', padding: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e40af', fontSize: '0.85rem', display: 'flex', gap: '10px' }}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                                <div><strong>Real-Time API Active.</strong> This will instantly sync the pickup, assign tracking links to the customer side, and prepare printing labels!</div>
-                              </div>
-                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                <button onClick={() => setIsShiprocketModalOpen(false)} style={{ padding: '10px 16px', border: '1px solid #e2e8f0', background: 'white', borderRadius: '8px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>Cancel</button>
-                                <button onClick={() => {
-                                  toast.promise(
-                                    fetch('/api/shiprocket', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        orderIds: Array.from(selectedOrders),
-                                        dimensions: bulkDimensions,
-                                        pickupDate: bulkPickupDate
-                                      })
-                                    }).then(async res => {
-                                      const data = await res.json();
-                                      if (!res.ok) throw new Error(data.error || 'Failed to dispatch via Shiprocket');
-                                      return data;
-                                    }),
-                                    {
-                                      loading: 'Connecting to Shiprocket API & Generating Real AWBs...',
-                                      success: (data) => {
-                                        fetchData();
-                                        setIsShiprocketModalOpen(false);
-                                        setSelectedOrders(new Set());
-                                        return `Successfully dispatched ${data.processed} orders! AWBs are now live.`;
-                                      },
-                                      error: (err) => `Dispatch Error: ${err.message}`
-                                    }
-                                  );
-                                }} style={{ padding: '10px 24px', background: '#f59e0b', border: 'none', color: 'white', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 10px rgba(245, 158, 11, 0.3)' }}>Generate Bulk AWBs</button>
+
+                                <div style={{ display: 'flex', gap: '15px', marginTop: '25px', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <button onClick={() => setIsShiprocketModalOpen(false)} style={{ padding: '12px 24px', border: '1px solid #cbd5e1', background: '#f1f5f9', borderRadius: '10px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Cancel Dispatch</button>
+                                  <button onClick={() => {
+                                    toast.promise(
+                                      fetch('/api/shiprocket', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          orderIds: Array.from(selectedOrders),
+                                          dimensions: bulkDimensions,
+                                          pickupDate: bulkPickupDate,
+                                          courierId: bulkCourierId
+                                        })
+                                      }).then(async res => {
+                                        const data = await res.json();
+                                        if (!res.ok) throw new Error(data.error || 'Failed to dispatch via Shiprocket');
+                                        return data;
+                                      }),
+                                      {
+                                        loading: 'Connecting to Shiprocket API & Generating Real AWBs...',
+                                        success: (data) => {
+                                          fetchData();
+                                          setIsShiprocketModalOpen(false);
+                                          setSelectedOrders(new Set());
+                                          return `Successfully dispatched ${data.processed} orders! AWBs are now live.`;
+                                        },
+                                        error: (err) => `Dispatch Error: ${err.message}`
+                                      }
+                                    );
+                                  }} style={{ flex: 1, padding: '12px 24px', background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', border: 'none', color: 'white', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 10px 20px -5px rgba(37, 99, 235, 0.4)' }}>{selectedOrders.size > 1 ? 'Generate Bulk AWBs' : 'Generate AWB'}</button>
+                                </div>
                               </div>
                             </motion.div>
                           </div>

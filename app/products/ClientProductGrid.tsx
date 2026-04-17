@@ -203,9 +203,9 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                 visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.5 } }
               }}
             >
-              <div onClick={() => router.push(`/products/${p._id}`)} style={{ cursor: 'pointer', height: 'clamp(140px, 35vw, 220px)', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', borderBottom: '1px solid #eaeaea' }}>
+              <Link href={`/products/${p._id}`} prefetch={true} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'clamp(140px, 35vw, 220px)', background: '#f8fafc', borderBottom: '1px solid #eaeaea', textDecoration: 'none', color: 'inherit' }}>
                 <ProductImageCarousel images={p.images && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : [])} name={p.name} />
-              </div>
+              </Link>
               <div style={{ padding: 'clamp(0.6rem, 2vw, 1.25rem)', minWidth: 0 }}>
                 <div style={{ display: 'inline-block', background: 'rgba(255, 179, 0, 0.2)', color: 'var(--color-tertiary)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', fontSize: '0.7rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase' }}>{p.category}</div>
                 {(() => {
@@ -218,7 +218,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
 
                   return (
                     <>
-                      <div onClick={() => router.push(`/products/${p._id}`)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', width: '100%', marginBottom: '10px' }}>
+                      <Link href={`/products/${p._id}`} prefetch={true} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', width: '100%', marginBottom: '10px' }}>
                         <h3 style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)', fontWeight: 700, color: 'var(--color-text)', textTransform: 'capitalize', margin: 0, width: '100%', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>{p.name}</h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flexShrink: 0, width: '100%' }}>
@@ -235,7 +235,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                           )}
                           <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>(Incl. of all taxes)</div>
                         </div>
-                      </div>
+                      </Link>
 
                       <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                         {allVariants.map((v: any, idx: number) => {
