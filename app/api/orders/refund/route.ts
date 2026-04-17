@@ -64,11 +64,11 @@ export async function POST(req: NextRequest) {
       speed: "normal" // Can be "optimum" for instant refund, but requires Razorpay account config
     });
 
-    // Mark as refunded internally and log the transaction Ref ID
+    // Mark as refund initiated internally and log the transaction Ref ID
     await prisma.order.update({
       where: { id: order.id },
       data: { 
-        paymentStatus: 'refunded',
+        paymentStatus: 'refund initiated',
         refundId: refundRes.id
       } as any // Allow new schema field bypass if prisma hasn't regenerated globally
     });

@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       await prisma.order.update({
         where: { id: dbOrderId },
         data: { 
-          status: 'Processing', 
+          status: 'Pending', 
           paymentStatus: 'paid',
           ...(paymentId && { paymentId })
         }
@@ -70,6 +70,33 @@ export async function POST(req: NextRequest) {
         }
       } catch (err: any) {
          console.error(`[WEBHOOK] Failed to update payment failure for order log:`, err.message);
+      }
+    }
+
+    // Handle asynchronous Refund Events from Razorpay natively
+    if (event.event === 'refund.processed') {
+      const refundId = event.payload.refund.entity.id;
+      const paymentId = event.payload.refund.entity.payment_id;
+
+      if (paymentId && refundId) {
+        await prisma.order.updateMany({
+          where: { paymentId: paymentId },
+          data: { paymentStatus: 'refunded' }
+        });
+        console.log(`[WEBHOOK] Refund ${refundId} marked as successfully Refunded (Completed) for Payment ${paymentId}`);
+      }
+    }
+
+    if (event.event === 'refund.failed') {
+      const refundId = event.payload.refund.entity.id;
+      const paymentId = event.payload.refund.entity.payment_id;
+
+      if (paymentId) {
+        await prisma.order.updateMany({
+          where: { paymentId: paymentId },
+          data: { paymentStatus: 'payment failed' } // Revert to failed or maintain refund initiated state depending on business logic, but typically flag as failed
+        });
+        console.error(`[WEBHOOK] BANK REFUND FAILED for ${refundId}. Please check Razorpay Dashboard.`);
       }
     }
 

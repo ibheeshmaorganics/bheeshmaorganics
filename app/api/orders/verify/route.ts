@@ -33,10 +33,10 @@ export async function POST(req: NextRequest) {
       await prisma.order.update({
         where: { id: orderId },
         data: { 
-          status: 'Processing', 
+          status: 'Pending', 
           paymentStatus: isCod ? 'cod (Advance Paid)' : 'paid',
           paymentId: razorpay_payment_id
-        } // Set status to Processing/Paid natively
+        } // Preserve in Pending/NEW tab natively
       });
 
       return NextResponse.json({ success: true, message: 'Payment successfully verified' });

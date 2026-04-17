@@ -177,18 +177,32 @@ function TrackContent() {
                       </>
                     )}
 
-                    {(order.status === 'CANCELLED' || order.status === 'RTO') && (
+                    {(order.status === 'CANCELLED' || order.status === 'RTO') && 
+                     order.paymentStatus !== 'payment failed' && 
+                     order.paymentStatus !== 'payment processing/pending' && (
                       <div style={{ marginTop: '12px', padding: '12px', background: '#fee2e2', borderRadius: '8px', border: '1px solid #fecaca' }}>
                         <h4 style={{ margin: '0 0 4px 0', fontSize: '0.9rem', color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Refund Information</h4>
-                        {order.status === 'CANCELLED' && order.paymentMethod !== 'Cash' && (
+                        
+                        {order.status === 'CANCELLED' && (order.paymentMethod !== 'Cash' && !order.paymentStatus?.toLowerCase().includes('cod')) && (
                           <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d', fontWeight: 600 }}>Eligible for Full Refund: ₹{order.totalAmount}</p>
                         )}
-                        {order.status === 'RTO' && order.paymentMethod !== 'Cash' && (
+                        
+                        {order.status === 'RTO' && (order.paymentMethod !== 'Cash' && !order.paymentStatus?.toLowerCase().includes('cod')) && (
                           <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d', fontWeight: 600 }}>Delivery Failed. Refund Eligible: ₹{order.totalAmount - 99} <span style={{ fontWeight: 400 }}>(₹99 courier fee deducted)</span></p>
                         )}
-                        {(order.status === 'CANCELLED' || order.status === 'RTO') && order.paymentMethod === 'Cash' && (
+                        
+                        {(order.paymentMethod === 'Cash' || order.paymentStatus?.toLowerCase().includes('cod')) && (
                           <p style={{ margin: 0, fontSize: '0.85rem', color: '#7f1d1d', fontWeight: 600 }}>COD Advance of ₹99 is Non-Refundable.</p>
                         )}
+                      </div>
+                    )}
+
+                    {order.paymentStatus === 'payment failed' && (
+                      <div style={{ marginTop: '12px', padding: '12px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fca5a5' }}>
+                         <p style={{ margin: 0, fontSize: '0.85rem', color: '#991b1b', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                            Payment Failed. No money was deducted.
+                         </p>
                       </div>
                     )}
                   </div>

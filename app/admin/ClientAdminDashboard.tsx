@@ -339,7 +339,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
         const data = await res.json();
         if (res.ok) {
           toast.success(data.message || 'Refund successfully processed');
-          setEditingOrder({ ...editingOrder, paymentStatus: 'refunded', refundId: data.refundId });
+          setEditingOrder({ ...editingOrder, paymentStatus: 'refund initiated', refundId: data.refundId });
           fetchData();
         } else {
           toast.error(data.error || 'Failed to process refund');
