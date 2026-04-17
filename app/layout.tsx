@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ConditionalLayout from '@/components/ConditionalLayout';
+import VisitorTracker from '@/components/VisitorTracker';
 import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <VisitorTracker />
         <ConditionalLayout>
           {children}
         </ConditionalLayout>

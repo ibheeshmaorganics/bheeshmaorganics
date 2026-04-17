@@ -45,4 +45,12 @@ model Order {
   courierName       String?
   trackingLink      String?
   paymentStatus     String   @default("payment processing/pending")
+  refundId          String?
+}
+
+model Visitor {
+  id        String   @id @default(uuid())
+  sessionId String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

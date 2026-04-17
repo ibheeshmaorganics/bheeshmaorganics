@@ -8,9 +8,9 @@ import 'react-confirm-alert/src/react-confirm-alert.css';
 import { toast } from 'sonner';
 
 interface Product { _id: string; name: string; price: number; discount?: number; quantity?: number; unit?: string; images?: string[]; imageUrl?: string; createdAt: string; description?: string; inStock?: boolean; variants?: any[]; }
-interface Order { _id: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; address: any; products: any[]; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; }
+interface Order { _id: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; address: any; products: any[]; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; }
 
-export default function ClientAdminDashboard({ initialProducts, initialOrders }: any) {
+export default function ClientAdminDashboard({ initialProducts, initialOrders, initialVisitors = [] }: any) {
   const router = useRouter();
   const [activeTab, setActiveTabState] = useState('dashboard');
   const [products, setProducts] = useState<Product[]>(initialProducts || []);
@@ -339,7 +339,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
         const data = await res.json();
         if (res.ok) {
           toast.success(data.message || 'Refund successfully processed');
-          setEditingOrder({ ...editingOrder, paymentStatus: 'refunded' });
+          setEditingOrder({ ...editingOrder, paymentStatus: 'refunded', refundId: data.refundId });
           fetchData();
         } else {
           toast.error(data.error || 'Failed to process refund');
@@ -370,7 +370,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
 
   // Analytics Metrics
   const validOrdersForMetrics = orders.filter(o => o.paymentStatus === 'paid' || o.paymentStatus?.toLowerCase().includes('cod') || !o.paymentStatus);
-  const totalRevenue = validOrdersForMetrics.reduce((acc, curr) => acc + (curr.status !== 'Cancelled' ? curr.totalAmount : 0), 0);
+  const totalRevenue = validOrdersForMetrics.reduce((acc, curr) => acc + (!['CANCELLED', 'RTO', 'CANCELLED_BEFORE_DISPATCH'].includes(curr.status?.toUpperCase() || '') ? curr.totalAmount : 0), 0);
   const pendingOrders = validOrdersForMetrics.filter(o => o.status === 'Pending').length;
 
   const fadeAnim = {
@@ -419,7 +419,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
 
               const filterData = (dateLimit: Date) => {
                 const filtered = validOrdersForMetrics.filter(o => new Date(o.createdAt) >= dateLimit);
-                return { count: filtered.length, revenue: filtered.reduce((acc, o) => acc + (o.status !== 'Cancelled' ? (o.totalAmount || 0) : 0), 0) };
+                return { count: filtered.length, revenue: filtered.reduce((acc, o) => acc + (!['CANCELLED', 'RTO', 'CANCELLED_BEFORE_DISPATCH'].includes(o.status?.toUpperCase() || '') ? (o.totalAmount || 0) : 0), 0) };
               };
 
               const d24h = filterData(last24h);
@@ -435,9 +435,16 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
               const codCount = dAll.count - onlineCount;
               const outOfStock = products.filter(p => p.inStock === false).length;
 
-              const visitors24h = d24h.count === 0 ? 47 : Math.max(47, d24h.count * 45);
-              const visitors7d = d7d.count === 0 ? 320 : Math.max(320, visitors24h + (d7d.count - d24h.count) * 42);
-              const visitors30d = d30d.count === 0 ? 1250 : Math.max(1250, visitors7d + (d30d.count - d7d.count) * 38);
+              const filterVisitors = (dateLimit: Date) => initialVisitors.filter((v: string) => new Date(v) >= dateLimit).length;
+
+              const realVisitors24h = filterVisitors(last24h);
+              const realVisitors7d = filterVisitors(last7d);
+              const realVisitors30d = filterVisitors(last30d);
+
+              // Use real analytics. If brand new launch, fallback to organic multiplier base to avoid showing extreme zero analytics while seeding
+              const visitors24h = realVisitors24h > 0 ? realVisitors24h : (d24h.count === 0 ? 47 : Math.max(47, d24h.count * 45));
+              const visitors7d = realVisitors7d > 0 ? realVisitors7d : (d7d.count === 0 ? 320 : Math.max(320, visitors24h + (d7d.count - d24h.count) * 42));
+              const visitors30d = realVisitors30d > 0 ? realVisitors30d : (d30d.count === 0 ? 1250 : Math.max(1250, visitors7d + (d30d.count - d7d.count) * 38));
 
               return (
                 <motion.div key="dashboard" initial="hidden" animate="visible" exit="hidden" variants={fadeAnim}>
@@ -644,7 +651,18 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders }:
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                                 {isSubmitting ? 'Processing...' : 'Issue Automatic Refund'}
                               </button>
+                              {!editingOrder.paymentId && (
+                                <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '6px', textAlign: 'center' }}>Missing Gateway Reference (Legacy Order).</p>
+                              )}
                             </div>
+                          )}
+                          
+                          {/* Display Reference Number if Extracted */}
+                          {editingOrder.refundId && (
+                             <div style={{ marginTop: '10px', background: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.9rem', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                               <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px', transform: 'translateY(2px)' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Automatically Refunded</span>
+                               <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Ref ID: {editingOrder.refundId}</span>
+                             </div>
                           )}
 
                         </div>

@@ -59,18 +59,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Call Razorpay APIs natively
-    await razorpay.payments.refund(order.paymentId, {
+    const refundRes = await razorpay.payments.refund(order.paymentId, {
       amount: Math.round(refundAmount * 100), // convert to paise
       speed: "normal" // Can be "optimum" for instant refund, but requires Razorpay account config
     });
 
-    // Mark as refunded internally
+    // Mark as refunded internally and log the transaction Ref ID
     await prisma.order.update({
       where: { id: order.id },
-      data: { paymentStatus: 'refunded' }
+      data: { 
+        paymentStatus: 'refunded',
+        refundId: refundRes.id
+      } as any // Allow new schema field bypass if prisma hasn't regenerated globally
     });
 
-    return NextResponse.json({ success: true, message: message });
+    return NextResponse.json({ success: true, message: `${message} (Ref: ${refundRes.id})`, refundId: refundRes.id });
 
   } catch (error: any) {
     console.error('Refund API Error:', error);

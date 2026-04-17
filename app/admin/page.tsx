@@ -21,6 +21,10 @@ export default async function AdminPage() {
     orderBy: { createdAt: 'desc' }
   });
 
+  const rawVisitors = await prisma.visitor.findMany({
+    select: { updatedAt: true }
+  });
+
   const products = rawProducts.map(p => ({
     ...p,
     _id: p.id,
@@ -33,5 +37,7 @@ export default async function AdminPage() {
     createdAt: o.createdAt.toISOString()
   }));
 
-  return <ClientAdminDashboard initialProducts={products} initialOrders={orders} />;
+  const visitors = rawVisitors.map(v => v.updatedAt.toISOString());
+
+  return <ClientAdminDashboard initialProducts={products} initialOrders={orders} initialVisitors={visitors} />;
 }

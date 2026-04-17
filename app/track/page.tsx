@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import styles from './page.module.css';
 
-interface Order { _id: string; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; address: any; products: any[]; }
+interface Order { _id: string; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; refundId?: string; address: any; products: any[]; }
 
 function TrackContent() {
   const searchParams = useSearchParams();
@@ -158,6 +158,12 @@ function TrackContent() {
                       <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order Total</span>
                       <span style={{ fontWeight: 800, color: order.paymentStatus === 'paid' ? '#16a34a' : '#1e293b' }}>₹{order.totalAmount}</span>
                     </div>
+                    {order.refundId && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
+                        <span style={{ color: '#059669', fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '4px' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Refund Ref #</span>
+                        <span style={{ fontWeight: 800, color: '#059669', fontSize: '0.8rem' }}>{order.refundId}</span>
+                      </div>
+                    )}
                     {order.paymentStatus?.toLowerCase().includes('cod') && order.totalAmount > 99 && (
                       <>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', color: '#16a34a' }}>
