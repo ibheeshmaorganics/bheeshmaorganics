@@ -3,7 +3,7 @@
 :root {
   /* Bheeshma Organics Theme */
   --color-primary: #4bae4f; /* Green */
-  --color-primary-dark: #388e3c;
+  --color-primary-dark: #2e7d32;
   --color-secondary: #ffb300; /* Yellow / Mustard */
   --color-tertiary: #ff9800; /* Orange */
   
@@ -92,13 +92,13 @@ button {
 
 .btn-secondary {
   background-color: var(--color-secondary);
-  color: var(--color-text);
+  color: #111827;
 }
 
 .btn-secondary:hover {
   background-color: var(--color-tertiary);
   transform: translateY(-2px);
-  color: white;
+  color: #111827;
   box-shadow: var(--shadow-md);
 }
 

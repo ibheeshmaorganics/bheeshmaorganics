@@ -82,7 +82,7 @@ export default function Home() {
           <div
             className={styles.heroImageContainer}
           >
-            <img src="/images/group_products.png" alt="Bheeshma Organics Product Collection" className={styles.heroMainImage} />
+            <Image src="/images/group_products.png" alt="Bheeshma Organics Product Collection" fill sizes="(max-width: 768px) 100vw, 380px" className={styles.heroMainImage} style={{ objectFit: 'cover' }} priority />
           </div>
         </div>
       </section>
@@ -123,7 +123,7 @@ export default function Home() {
             ].map((item, i) => (
               <motion.div key={i} variants={fadeUp} className={styles.brandItem}>
                 <div className={styles.brandImageWrapper}>
-                  <img src={item.icon} alt={item.text} className={styles.brandImage} />
+                  <Image src={item.icon} alt={item.text} fill sizes="120px" className={styles.brandImage} />
                 </div>
                 <h3 className={styles.brandText}>{item.text}</h3>
                 <p className={styles.brandDesc}>{item.desc}</p>
@@ -168,7 +168,7 @@ export default function Home() {
                   transition={{ duration: 0.6, delay: idx * 0.15 }}
                 >
                   <div className={styles.whyImageWrapper}>
-                    <img src={feature.icon} alt={feature.title} className={styles.whyImage} />
+                    <Image src={feature.icon} alt={feature.title} fill sizes="(max-width: 768px) 100vw, 30vw" className={styles.whyImage} />
                   </div>
                   <h3 className={styles.whyCardTitle}>{feature.title}</h3>
                   <p className={styles.whyCardText}>{feature.text}</p>
@@ -189,7 +189,7 @@ export default function Home() {
                 ].map((feature, idx) => (
                   <div key={`m-${idx}`} className={styles.whyCardMobile}>
                     <div className={styles.whyImageWrapper}>
-                      <img src={feature.icon} alt={feature.title} className={styles.whyImage} />
+                      <Image src={feature.icon} alt={feature.title} fill sizes="280px" className={styles.whyImage} />
                     </div>
                     <h3 className={styles.whyCardTitle}>{feature.title}</h3>
                     <p className={styles.whyCardText}>{feature.text}</p>
