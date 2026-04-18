@@ -3,6 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import Marquee from 'react-fast-marquee';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import styles from './page.module.css';
 
 const fadeUp: any = {
@@ -24,6 +26,13 @@ const scaleIn: any = {
 };
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Aggressively prefetch the products page right away so it instantly renders
+    router.prefetch('/products');
+  }, [router]);
+
   return (
     <div className={styles.main}>
       {/* Hero Section */}
