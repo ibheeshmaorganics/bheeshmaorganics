@@ -30,6 +30,8 @@ export async function GET(req: NextRequest) {
     });
 
     let refunds = [];
+    let payment_id_to_fetch = paymentId;
+
     if (paymentId) {
       // fetch all refunds for a payment
       const res = await razorpay.refunds.all({ payment_id: paymentId });
@@ -37,9 +39,33 @@ export async function GET(req: NextRequest) {
     } else if (refundId) {
       const singleRefund = await razorpay.refunds.fetch(refundId);
       refunds = [singleRefund];
+      payment_id_to_fetch = singleRefund.payment_id;
     }
 
-    return NextResponse.json({ success: true, refunds });
+    let paymentDetails = null;
+    if (payment_id_to_fetch) {
+      try {
+        paymentDetails = await razorpay.payments.fetch(payment_id_to_fetch);
+      } catch (e) {
+        console.error("Could not fetch payment details for refund mapping", e);
+      }
+    }
+
+    const enhancedRefunds = refunds.map((r: any) => {
+      let source = null;
+      if (paymentDetails) {
+        source = {
+          method: paymentDetails.method,
+          vpa: paymentDetails.vpa,
+          bank: paymentDetails.bank,
+          wallet: paymentDetails.wallet,
+          card: paymentDetails.card ? `${paymentDetails.card.network} ...${paymentDetails.card.last4}` : null,
+        };
+      }
+      return { ...r, payment_source: source };
+    });
+
+    return NextResponse.json({ success: true, refunds: enhancedRefunds });
 
   } catch (error: any) {
     console.error('Refund Fetch API Error:', error);

@@ -10,13 +10,13 @@ interface Product { _id: string; name: string; category: string; price: number; 
 
 function ProductImageCarousel({ images, name }: { images: string[], name: string }) {
   if (!images || images.length === 0) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🌿</div>;
-  if (images.length === 1) return <img src={images[0]} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />;
+  if (images.length === 1) return <img src={images[0]} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }} />;
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
       <div style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', width: '100%', height: '100%', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollBehavior: 'smooth' }}>
         {images.map((img, i) => (
-          <img key={i} src={img} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0, scrollSnapAlign: 'start' }} />
+          <img key={i} src={img} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain', flexShrink: 0, scrollSnapAlign: 'start' }} />
         ))}
       </div>
       <div style={{ position: 'absolute', bottom: '8px', width: '100%', display: 'flex', justifyContent: 'center', gap: '6px', pointerEvents: 'none' }}>

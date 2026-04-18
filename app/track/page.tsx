@@ -125,7 +125,10 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem' }}>₹{order.totalAmount}</span>
+            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem', display: 'flex', alignItems: 'center' }}>
+              <span style={{ opacity: 0.6, fontSize: '0.7rem', marginRight: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount:</span>
+              ₹{order.totalAmount}
+            </span>
           </div>
         </div>
 
@@ -185,7 +188,10 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
                   <span style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.9rem' }}>{item.quantity}x</span>
                   <span style={{ color: '#475569', fontSize: '0.9rem', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productId?.name || 'Product'}</span>
                 </div>
-                <span style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.9rem' }}>₹{item.price * item.quantity}</span>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{ opacity: 0.6, fontSize: '0.65rem', marginRight: '4px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 800 }}>Amount:</span>
+                  <span style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.9rem' }}>₹{item.price * item.quantity}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -233,7 +239,7 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
           {/* Real-time Customer Refund Timeline */}
           {liveRefunds.length > 0 && (
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Gateway Refund Timeline</label>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Refund Information</label>
               {isFetchingLiveRefunds ? (
                  <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Syncing timeline with Razorpay...</p>
               ) : (
@@ -252,7 +258,10 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                            {ref.status === 'processed' ? 'Refunded Success' : ref.status === 'failed' ? 'Refund Failed' : ref.status}
                          </span>
-                         <span style={{ fontSize: '0.8rem', fontWeight: 700, color: theme.color }}>₹{(ref.amount / 100).toFixed(2)}</span>
+                         <span style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.color, display: 'flex', alignItems: 'center' }}>
+                           <span style={{ opacity: 0.75, fontSize: '0.7rem', marginRight: '6px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Refund Amount:</span>
+                           ₹{(ref.amount / 100).toFixed(2)}
+                         </span>
                        </div>
                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', color: '#475569' }}>
                          <div><strong style={{ opacity: 0.8 }}>Initiated:</strong> {new Date(ref.created_at * 1000).toLocaleString('en-IN')}</div>
@@ -263,6 +272,12 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
                            </div>
                          )}
                          {ref.arn && <div style={{ color: '#0f172a' }}><strong style={{ opacity: 0.8 }}>Bank Ref (ARN):</strong> <span style={{ userSelect: 'all' }}>{ref.arn}</span></div>}
+                         {ref.payment_source && (
+                           <div style={{ marginTop: '4px', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '4px' }}>
+                             <strong style={{ opacity: 0.8, textTransform: 'capitalize' }}>To {ref.payment_source.method || 'Account'}:</strong>{' '}
+                             {ref.payment_source.vpa || ref.payment_source.bank || ref.payment_source.card || ref.payment_source.wallet || 'Original Source'}
+                           </div>
+                         )}
                          <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>Razorpay Record: {ref.id}</div>
                        </div>
                      </div>

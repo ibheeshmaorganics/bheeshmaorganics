@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
         const mappedProduct = productMap[baseId];
         return {
           ...op,
-          productId: mappedProduct ? { ...mappedProduct, name: mappedProduct.name + variantSuffix } : { _id: op.productId, name: 'Unknown Product' }
+          productId: mappedProduct ? { ...mappedProduct, name: mappedProduct.name + variantSuffix } : { _id: op.productId, name: op.name || 'Unknown Product' }
         };
       });
       return {

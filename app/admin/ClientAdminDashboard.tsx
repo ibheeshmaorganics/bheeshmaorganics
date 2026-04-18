@@ -745,6 +745,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
               return (
                 <div style={{ background: '#f1f5f9', padding: '10px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#475569', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.8, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount:</span>
                   ₹{editingOrder.totalAmount || 0}
                   <span style={{ fontSize: '0.7rem', color: '#475569', opacity: 0.8, fontWeight: 700, marginLeft: '6px' }}>(Unpaid / Not Captured)</span>
                 </div>
@@ -753,6 +754,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
             return (
               <div style={{ background: '#dcfce7', padding: '10px 12px', borderRadius: '4px', border: '1px solid #bbf7d0', color: '#166534', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px' }}><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span style={{ fontSize: '0.75rem', opacity: 0.8, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount:</span>
                 ₹{(editingOrder.paymentMethod?.toLowerCase() === 'cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod') ? '99' : (editingOrder.totalAmount || 0)}
                 <span style={{ fontSize: '0.7rem', color: '#166534', opacity: 0.8, fontWeight: 700, marginLeft: '6px' }}>{(editingOrder.paymentMethod?.toLowerCase() === 'cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod') ? '(Partial Advance)' : '(Full Payment)'}</span>
               </div>
@@ -805,7 +807,10 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                          {ref.status === 'processed' ? 'Refunded Success' : ref.status === 'failed' ? 'Refund Failed' : ref.status}
                        </span>
-                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: theme.color }}>₹{(ref.amount / 100).toFixed(2)}</span>
+                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.color, display: 'flex', alignItems: 'center' }}>
+                         <span style={{ opacity: 0.75, fontSize: '0.7rem', marginRight: '6px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Refund Amount:</span>
+                         ₹{(ref.amount / 100).toFixed(2)}
+                       </span>
                      </div>
                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', color: '#475569' }}>
                        <div><strong style={{ opacity: 0.8 }}>Initiated:</strong> {new Date(ref.created_at * 1000).toLocaleString('en-IN')}</div>
@@ -816,6 +821,12 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                          </div>
                        )}
                        {ref.arn && <div><strong style={{ opacity: 0.8 }}>Bank Ref (ARN):</strong> {ref.arn}</div>}
+                       {ref.payment_source && (
+                         <div style={{ marginTop: '4px', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '4px' }}>
+                           <strong style={{ opacity: 0.8, textTransform: 'capitalize' }}>To {ref.payment_source.method || 'Account'}:</strong>{' '}
+                           {ref.payment_source.vpa || ref.payment_source.bank || ref.payment_source.card || ref.payment_source.wallet || 'Original Source'}
+                         </div>
+                       )}
                        <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>Razorpay Record: {ref.id}</div>
                      </div>
                    </div>
@@ -1160,7 +1171,10 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                     <span style={{ color: 'var(--color-text-light)', fontSize: '0.6rem' }}>{o.phone}</span>
                                   </td>
                                   <td style={{ fontWeight: 700, color: 'var(--color-tertiary)', padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
-                                    ₹{o.totalAmount}
+                                    <span style={{ display: 'flex', alignItems: 'center' }}>
+                                      <span style={{ opacity: 0.6, fontSize: '0.65rem', marginRight: '4px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amt:</span> 
+                                      ₹{o.totalAmount}
+                                    </span>
                                     {(o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod' || o.paymentStatus?.toLowerCase().includes('cod')) && (
                                       <div style={{ color: '#ef4444', fontSize: '0.6rem', marginTop: '4px' }}>
                                         COD (Bal: ₹{o.totalAmount > 99 ? o.totalAmount - 99 : o.totalAmount})

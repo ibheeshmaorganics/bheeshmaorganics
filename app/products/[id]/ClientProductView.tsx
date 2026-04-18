@@ -191,7 +191,7 @@ export default function ClientProductView({ product }: { product: any }) {
           width: fit-content;
         }
         .bo-title {
-          font-size: 2.8rem;
+          font-size: 1.8rem;
           font-weight: 900;
           color: var(--color-text);
           line-height: 1.15;
@@ -401,7 +401,7 @@ export default function ClientProductView({ product }: { product: any }) {
                }}
             >
               {images.length > 0 ? images.map((img: string, i: number) => (
-                <img key={i} src={img} alt={product.name} style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', objectFit: 'cover', aspectRatio: '1/1' }} />
+                <img key={i} src={img} alt={product.name} style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', objectFit: 'contain', aspectRatio: '1/1' }} />
               )) : <div style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🌿</div>}
             </div>
 
@@ -463,7 +463,7 @@ export default function ClientProductView({ product }: { product: any }) {
                }}
             >
               {images.length > 0 ? images.map((img: string, i: number) => (
-                <img key={i} src={img} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', objectFit: 'cover', aspectRatio: '1/1' }} />
+                <img key={i} src={img} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', objectFit: 'contain', aspectRatio: '1/1' }} />
               )) : <div style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🌿</div>}
             </div>
 
@@ -565,14 +565,15 @@ export default function ClientProductView({ product }: { product: any }) {
             </div>
           </div>
 
-          {product.description && (
-            <div className={styles.descriptionBox}>
-              <h3 className={styles.sectionTitle}>About this product</h3>
-              <p>{product.description}</p>
-            </div>
-          )}
         </div>
       </motion.div>
+
+      {product.description && (
+        <div className={styles.descriptionBox} style={{ width: '100%', maxWidth: '100%', marginTop: '3rem' }}>
+          <h3 className={styles.sectionTitle} style={{ fontSize: '1.5rem', marginBottom: '20px' }}>About this product</h3>
+          <p>{product.description}</p>
+        </div>
+      )}
     </div>
     </>
   );
