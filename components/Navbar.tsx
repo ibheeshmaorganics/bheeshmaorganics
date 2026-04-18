@@ -31,11 +31,8 @@ export default function Navbar() {
   }, []);
 
   return (
-    <motion.header 
+    <header 
       className={`${styles.header} ${scrolled ? styles.scrolled : ''}`}
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 100, damping: 20 }}
     >
       <div className="container">
         <div className={styles.navContainer}>
@@ -59,14 +56,12 @@ export default function Navbar() {
             <Link href="/track" className={`btn ${styles.orderStatusBtn}`}>My Orders</Link>
             <Link href="/checkout" className={styles.cartIcon} title="Cart" style={{ position: 'relative' }}>
               {cartCount > 0 && (
-                <motion.span 
+                <span 
                   key={cartCount}
-                  initial={{ scale: 0.5 }}
-                  animate={{ scale: 1 }}
                   style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--color-tertiary)', color: 'white', fontSize: '0.8rem', fontWeight: 800, padding: '2px 6px', borderRadius: '12px', zIndex: 10, border: '2px solid white' }}
                 >
                   {cartCount}
-                </motion.span>
+                </span>
               )}
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="21" r="1"></circle>
@@ -77,6 +72,6 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 }

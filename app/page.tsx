@@ -33,35 +33,32 @@ export default function Home() {
         <div className={styles.blob2}></div>
 
         <div className={`container ${styles.heroContent}`}>
-          <motion.div
+          <div
             className={styles.heroText}
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
           >
-            <motion.div variants={fadeUp} className={styles.tag}>
+            <div className={styles.tag}>
               🍃 Premium Ayurvedic Wellness
-            </motion.div>
-            <motion.h1 variants={fadeUp} className={styles.title}>
+            </div>
+            <h1 className={styles.title}>
               India's Trusted <br />
               <span className={styles.highlight}>Organic & Ayurvedic</span> <br />
               Brand
-            </motion.h1>
-            <motion.p variants={fadeUp} className={styles.subtitle}>
+            </h1>
+            <p className={styles.subtitle}>
               From natural sourcing to carefully crafted products. Discover the power of Himalayan Sea Buckthorn, known for its nutritional benefits, antioxidant properties, and support for immunity.
-            </motion.p>
-            <motion.div variants={fadeUp} className={styles.ctaGroup}>
+            </p>
+            <div className={styles.ctaGroup}>
               <Link href="/products" prefetch={true} className={`btn btn-primary ${styles.btnLarge}`}>View Products</Link>
               <Link href="/about" prefetch={true} className={`btn ${styles.btnOutline}`}>Our Story</Link>
-            </motion.div>
+            </div>
 
-            <motion.div variants={fadeUp} className={styles.badges}>
+            <div className={styles.badges}>
               <span>✓ Quality Ingredients</span>
               <span>✓ Herbal Formulations</span>
               <span>✓ Ayurvedic Inspired</span>
-            </motion.div>
+            </div>
 
-            <motion.div variants={fadeUp} className={styles.platformHeroRow}>
+            <div className={styles.platformHeroRow}>
               <span className={styles.platformHeroLabel}> Buy Now On:</span>
               <a
                 href="https://www.amazon.in/stores/BHEESHMAORGANICS/page/9E599402-C004-44CE-AD94-F92B6CE1B68A?lp_context_asin=B0GPQTGS4S&ref_=cm_sw_r_apann_ast_store_74NN36C7C6B899KEPKJB&dplnk=Y&dplnkId=f4420508-c96c-4c8a-9f98-1eddb62f7e98"
@@ -79,17 +76,14 @@ export default function Home() {
               >
                 Flipkart
               </a>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
-          <motion.div
+          <div
             className={styles.heroImageContainer}
-            variants={scaleIn}
-            initial="hidden"
-            animate="visible"
           >
             <img src="/images/group_products.png" alt="Bheeshma Organics Product Collection" className={styles.heroMainImage} />
-          </motion.div>
+          </div>
         </div>
       </section>
 

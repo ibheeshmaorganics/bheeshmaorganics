@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { toast } from 'sonner';
 
 const styles: Record<string, string> = {
@@ -398,7 +399,9 @@ export default function ClientProductView({ product }: { product: any }) {
                }}
             >
               {images.length > 0 ? images.map((img: string, i: number) => (
-                <img key={i} src={img} alt={product.name} style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', objectFit: 'contain', aspectRatio: '1/1' }} />
+                <div key={i} style={{ width: '100%', height: '100%', position: 'relative', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1' }}>
+                  <Image src={img} alt={product.name} fill sizes="(max-width: 960px) 100vw, 50vw" priority={true} style={{ objectFit: 'contain' }} />
+                </div>
               )) : <div style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🌿</div>}
             </div>
 
@@ -429,18 +432,18 @@ export default function ClientProductView({ product }: { product: any }) {
           {images.length > 1 && (
             <div className={styles.thumbnails} style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: '10px', paddingBottom: '10px', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch', maxWidth: '100%' }}>
               {images.slice(0, 5).map((img: string, i: number) => (
-                <img
+                <div
                   key={i}
-                  src={img}
                   onClick={() => {
                     setSelectedImage(i);
                     const el = document.getElementById('desktop-image-carousel');
                     if(el) el.scrollTo({ left: el.clientWidth * i, behavior: 'smooth' });
                   }}
                   className={`${styles.thumb} ${selectedImage === i ? styles.thumbActive : ''}`}
-                  alt={`Thumbnail ${i}`}
-                  style={{ flexShrink: 0, minWidth: '80px', cursor: 'pointer' }}
-                />
+                  style={{ position: 'relative', flexShrink: 0, minWidth: '80px', height: '80px', cursor: 'pointer', overflow: 'hidden' }}
+                >
+                  <Image src={img} alt={`Thumbnail ${i}`} fill sizes="80px" style={{ objectFit: 'cover' }} />
+                </div>
               ))}
             </div>
           )}
@@ -460,7 +463,9 @@ export default function ClientProductView({ product }: { product: any }) {
                }}
             >
               {images.length > 0 ? images.map((img: string, i: number) => (
-                <img key={i} src={img} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', objectFit: 'contain', aspectRatio: '1/1' }} />
+                <div key={i} style={{ width: '100%', height: '100%', position: 'relative', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1' }}>
+                  <Image src={img} alt={product.name} fill sizes="(max-width: 960px) 100vw, 50vw" priority={true} style={{ objectFit: 'contain' }} />
+                </div>
               )) : <div style={{ width: '100%', height: '100%', flexShrink: 0, scrollSnapAlign: 'start', aspectRatio: '1/1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>🌿</div>}
             </div>
 
