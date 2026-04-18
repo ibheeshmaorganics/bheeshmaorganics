@@ -10,13 +10,13 @@ interface Product { _id: string; name: string; category: string; price: number; 
 
 function ProductImageCarousel({ images, name }: { images: string[], name: string }) {
   if (!images || images.length === 0) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🌿</div>;
-  if (images.length === 1) return <img src={images[0]} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '8px' }} />;
+  if (images.length === 1) return <img src={images[0]} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', borderRadius: '8px' }} />;
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
       <div style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', width: '100%', height: '100%', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollBehavior: 'smooth' }}>
         {images.map((img, i) => (
-          <img key={i} src={img} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain', flexShrink: 0, scrollSnapAlign: 'start' }} />
+          <img key={i} src={img} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top', flexShrink: 0, scrollSnapAlign: 'start' }} />
         ))}
       </div>
       <div style={{ position: 'absolute', bottom: '8px', width: '100%', display: 'flex', justifyContent: 'center', gap: '6px', pointerEvents: 'none' }}>
@@ -122,7 +122,9 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
       updateCart([...cart, { ...product, _id: cartId, name: displayName, price: finalPrice, quantity: 1, originalPrice: basePrice, productIdOriginal: product._id }]);
     }
 
-    toast.success(`${displayName} added to cart!`);
+    const shortName = product.name.length > 25 ? product.name.slice(0, 25) + '...' : product.name;
+    const shortDisplayName = `${shortName} - ${variant.size}`;
+    toast.success(`${shortDisplayName} added to cart!`);
   };
 
   const updateQuantity = (cartId: string, delta: number) => {
@@ -152,16 +154,13 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
       }}>
         <Image src="/images/shop_hero_bg.png" alt="Shop Hero Background" fill priority sizes="100vw" style={{ objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(16, 42, 28, 0.5)', zIndex: 1 }}></div>
-        <motion.div
+        <div
           className="container"
           style={{ position: 'relative', zIndex: 2 }}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
         >
           <h1 style={{ fontSize: 'clamp(1.1rem, 5.5vw, 4rem)', fontWeight: 800, marginBottom: '1rem', color: 'white', letterSpacing: '-1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>Premium Wellness Collection</h1>
           <p style={{ fontSize: 'clamp(1.1rem, 2vw, 1.35rem)', color: 'rgba(255, 255, 255, 0.95)', maxWidth: '700px', margin: '0 auto', lineHeight: 1.6, textShadow: '0 1px 5px rgba(0,0,0,0.5)' }}>Carefully crafted from pure Himalayan sourcing and traditional medicinal wisdom to support your daily holistic health.</p>
-        </motion.div>
+        </div>
       </div>
 
       <div className="container" style={{ padding: 'clamp(2rem, 5vw, 4rem) 1rem', maxWidth: '1300px' }}>
@@ -184,23 +183,11 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
             }
           }
         `}} />
-        <motion.div
-          className="responsiveGrid"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
-          }}
-        >
+        <div className="responsiveGrid">
           {visibleProducts.map(p => (
-            <motion.div
+            <div
               key={p._id}
               style={{ background: 'white', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 15px 35px rgba(0, 0, 0, 0.04)', border: '1px solid rgba(75, 174, 79, 0.1)', display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100vw' }}
-              variants={{
-                hidden: { opacity: 0, scale: 0.95, y: 20 },
-                visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.5 } }
-              }}
             >
               <Link href={`/products/${p._id}`} prefetch={true} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'clamp(140px, 35vw, 220px)', background: '#f8fafc', borderBottom: '1px solid #eaeaea', textDecoration: 'none', color: 'inherit' }}>
                 <ProductImageCarousel images={p.images && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : [])} name={p.name} />
@@ -218,7 +205,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                   return (
                     <>
                       <Link href={`/products/${p._id}`} prefetch={true} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', width: '100%', marginBottom: '10px' }}>
-                        <h3 style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)', fontWeight: 700, color: 'var(--color-text)', textTransform: 'capitalize', margin: 0, width: '100%', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.3 }}>{p.name}</h3>
+                        <h3 style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)', fontWeight: 700, color: 'var(--color-text)', textTransform: 'capitalize', margin: 0, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{p.name}</h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flexShrink: 0, width: '100%' }}>
                           {p.discount && p.discount > 0 ? (
@@ -298,14 +285,14 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                   );
                 })()}
               </div>
-            </motion.div>
+              </div>
           ))}
           {products.length === 0 && (
             <div style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '4rem', color: '#666' }}>
               We are currently restocking our wellness collection! Please visit again soon.
             </div>
           )}
-        </motion.div>
+        </div>
 
       </div>
     </div>

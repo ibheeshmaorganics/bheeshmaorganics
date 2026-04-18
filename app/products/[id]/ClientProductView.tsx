@@ -381,11 +381,8 @@ export default function ClientProductView({ product }: { product: any }) {
         ← Back to Shop
       </Link>
 
-      <motion.div
+      <div
         className={styles.grid}
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
       >
         {/* Left Side: Images (Desktop) */}
         <div className={`${styles.imageSection} bo-desktop-only`}>
@@ -566,7 +563,7 @@ export default function ClientProductView({ product }: { product: any }) {
           </div>
 
         </div>
-      </motion.div>
+      </div>
 
       {product.description && (
         <div className={styles.descriptionBox} style={{ width: '100%', maxWidth: '100%', marginTop: '3rem' }}>
