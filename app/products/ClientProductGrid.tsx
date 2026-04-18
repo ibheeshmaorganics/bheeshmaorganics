@@ -159,7 +159,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h1 style={{ fontSize: 'clamp(1.8rem, 6vw, 4rem)', fontWeight: 800, marginBottom: '1rem', color: 'white', letterSpacing: '-1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>Premium Wellness Collection</h1>
+          <h1 style={{ fontSize: 'clamp(1.1rem, 5.5vw, 4rem)', fontWeight: 800, marginBottom: '1rem', color: 'white', letterSpacing: '-1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>Premium Wellness Collection</h1>
           <p style={{ fontSize: 'clamp(1.1rem, 2vw, 1.35rem)', color: 'rgba(255, 255, 255, 0.95)', maxWidth: '700px', margin: '0 auto', lineHeight: 1.6, textShadow: '0 1px 5px rgba(0,0,0,0.5)' }}>Carefully crafted from pure Himalayan sourcing and traditional medicinal wisdom to support your daily holistic health.</p>
         </motion.div>
       </div>

@@ -26,6 +26,9 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
   // New states for orders tab
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [liveRefunds, setLiveRefunds] = useState<any[]>([]);
+  const [isFetchingLiveRefunds, setIsFetchingLiveRefunds] = useState(false);
+  const [refundType, setRefundType] = useState<'full' | 'deduct_99'>('full');
   const [orderSearch, setOrderSearch] = useState('');
   const [orderPage, setOrderPage] = useState(1);
   const [orderFilterTab, setOrderFilterTab] = useState('NEW');
@@ -150,6 +153,21 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     }, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (isEditingOrder && editingOrder && (editingOrder.paymentId || editingOrder.refundId) && editingOrder.paymentMethod?.toLowerCase() !== 'cash' && editingOrder.paymentMethod?.toLowerCase() !== 'cod') {
+      setIsFetchingLiveRefunds(true);
+      const query = editingOrder.paymentId ? `paymentId=${editingOrder.paymentId}` : `refundId=${editingOrder.refundId}`;
+      fetch(`/api/orders/refund/status?${query}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) setLiveRefunds(d.refunds || []);
+        })
+        .finally(() => setIsFetchingLiveRefunds(false));
+    } else {
+      setLiveRefunds([]);
+    }
+  }, [isEditingOrder, editingOrder?.paymentId, editingOrder?.refundId]);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,28 +346,44 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     e.preventDefault();
     if (!editingOrder) return;
     
-    if (confirm('Are you legally sure you want to process this refund? Money will be deducted from your corporate account instantly.')) {
-      setIsSubmitting(true);
-      try {
-        const res = await fetch('/api/orders/refund', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: editingOrder._id })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          toast.success(data.message || 'Refund successfully processed');
-          setEditingOrder({ ...editingOrder, paymentStatus: 'refund initiated', refundId: data.refundId });
-          fetchData();
-        } else {
-          toast.error(data.error || 'Failed to process refund');
-        }
-      } catch {
-        toast.error('Network Error processing refund');
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
+    confirmAlert({
+      title: 'Legally Verify Refund',
+      message: 'Are you legally sure you want to process this refund? Money will be deducted from your corporate account instantly.',
+      buttons: [
+        {
+          label: 'Yes, Process',
+          onClick: async () => {
+            setIsSubmitting(true);
+            try {
+              const res = await fetch('/api/orders/refund', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: editingOrder._id, refundType })
+              });
+              const data = await res.json();
+              if (res.ok) {
+                toast.success(data.message || 'Refund successfully processed');
+                setEditingOrder({ ...editingOrder!, paymentStatus: 'refund initiated', refundId: data.refundId });
+                fetchData();
+                const query = editingOrder.paymentId ? `paymentId=${editingOrder.paymentId}` : `refundId=${data.refundId}`;
+                fetch(`/api/orders/refund/status?${query}`)
+                  .then(r => r.json())
+                  .then(d => {
+                    if (d.success) setLiveRefunds(d.refunds || []);
+                  });
+              } else {
+                toast.error(data.error || 'Failed to process refund');
+              }
+            } catch {
+              toast.error('Network Error processing refund');
+            } finally {
+              setIsSubmitting(false);
+            }
+          }
+        },
+        { label: 'Cancel' }
+      ]
+    });
   };
 
   const handleLogout = () => {
@@ -579,214 +613,295 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
             {activeTab === 'orders' && (
               <motion.div key="orders" initial="hidden" animate="visible" exit="hidden" variants={fadeAnim} className={styles.ordersView}>
                 {isEditingOrder && editingOrder ? (
-                  <div className={styles.editOrderCard} style={{ color: '#1e293b', background: '#fff', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', marginBottom: '2rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                      <h3 style={{ fontSize: '1.5rem', color: '#1e293b' }}>Edit Order: #{editingOrder._id.slice(-6).toUpperCase()}</h3>
-                      <button onClick={() => setIsEditingOrder(false)} style={{ color: '#1e293b', background: '#e2e8f0', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Back</button>
+                  <div className={styles.editOrderCard} style={{ color: '#1e293b', background: '#fff', padding: '1rem', borderRadius: '4px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#1e293b' }}>Edit Order: #{editingOrder._id.slice(-6).toUpperCase()}</h3>
+                      <button onClick={() => setIsEditingOrder(false)} style={{ color: '#1e293b', background: '#e2e8f0', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>Back</button>
                     </div>
 
                     <form onSubmit={handleUpdateOrderDetails} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                      {Boolean(editingOrder.awbCode) && (
-                        <div style={{ gridColumn: '1 / -1', background: '#e0f2fe', padding: '16px', borderRadius: '10px', border: '1px solid #bae6fd', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                          <div>
-                            <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', fontWeight: 800 }}>Order Locked by Automated Sync</h4>
-                            <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: '1.4' }}>This order has been dispatched via Shiprocket (AWB Generated). Core details and lifecycle statuses are now updated dynamically via backend API automation to prevent desynchronization.</p>
-                          </div>
-                        </div>
-                      )}
                       
-                      <fieldset style={{ border: 'none', padding: 0, margin: 0, gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                      {/* Customer Info Card */}
-                      <div style={{ background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0', gridColumn: '1 / -1' }}>
-                        <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                          Customer Identity
-                        </h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>Full Name</label>
-                            <input required type="text" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.customerName} onChange={e => setEditingOrder({ ...editingOrder, customerName: e.target.value })} />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>Phone Number</label>
-                            <input required type="text" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.phone} onChange={e => setEditingOrder({ ...editingOrder, phone: e.target.value })} />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>Email Address</label>
-                            <input required type="email" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.email} onChange={e => setEditingOrder({ ...editingOrder, email: e.target.value })} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Payment & Status Card */}
-                      <div style={{ background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                        <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                          Transaction Details
-                        </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Payment Method</label>
-                            <input type="text" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.paymentMethod || 'Cash'} onChange={e => setEditingOrder({ ...editingOrder, paymentMethod: e.target.value })} />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Financial Status</label>
-                            <select className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.paymentStatus || 'cod'} onChange={e => setEditingOrder({ ...editingOrder, paymentStatus: e.target.value })}>
-                              <option value="cod">Cash on Delivery (COD)</option>
-                              <option value="payment processing/pending">Payment Processing/Pending</option>
-                              <option value="paid">Pre-Paid</option>
-                              <option value="payment failed">Payment Failed</option>
-                              <option value="refund initiated">Refund Initiated</option>
-                              <option value="refunded">Refunded (Completed)</option>
-                            </select>
-                          </div>
-                          
-                          {/* Secure Refund Automation Block */}
-                          {(editingOrder.status === 'CANCELLED' || editingOrder.status === 'RTO') && 
-                           (editingOrder.paymentMethod !== 'Cash' && editingOrder.paymentMethod?.toLowerCase() !== 'cod') && 
-                           editingOrder.paymentStatus !== 'refunded' && (
-                            <div style={{ marginTop: '10px' }}>
-                              <button onClick={handleProcessRefund} disabled={isSubmitting || !editingOrder.paymentId} type="button" style={{ width: '100%', padding: '12px', background: '#ef4444', color: 'white', fontWeight: 800, border: 'none', borderRadius: '8px', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                                {isSubmitting ? 'Processing...' : 'Issue Automatic Refund'}
-                              </button>
-                              {!editingOrder.paymentId && (
-                                <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '6px', textAlign: 'center' }}>Missing Gateway Reference (Legacy Order).</p>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Display Reference Number if Extracted */}
-                          {editingOrder.refundId && (
-                             <div style={{ marginTop: '10px', background: '#f0fdf4', padding: '12px', borderRadius: '8px', border: '1px solid #bbf7d0', color: '#166534', fontSize: '0.9rem', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                               <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px', transform: 'translateY(2px)' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Automatically Refunded</span>
-                               <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Ref ID: {editingOrder.refundId}</span>
-                             </div>
-                          )}
-
-                        </div>
-                      </div>
-
-                      {/* Operational Status */}
-                      <div style={{ background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                        <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                          Fulfillment Action
-                        </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Order Lifecycle Stage</label>
-                            <select className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.status} onChange={e => setEditingOrder({ ...editingOrder, status: e.target.value })}>
-                              <option value="NEW">🚀 NEW - Unconfirmed</option>
-                              <option value="CONFIRMED">📦 CONFIRMED - Start Packing</option>
-                              <option value="READY_TO_SHIP">🏷️ READY TO SHIP - Generate AWB</option>
-                              <option value="SHIPPED">🚚 SHIPPED - In Transit</option>
-                              <option value="IN_TRANSIT">🔄 IN TRANSIT - Wait</option>
-                              <option value="DELIVERED">✅ DELIVERED - Completed</option>
-                              <option value="RTO">❌ RTO - Return to Origin</option>
-                              <option value="CANCELLED">🛑 CANCELLED - Voided</option>
-                              <option value="Pending" style={{ display: 'none' }}>Pending</option>
-                              <option value="Processing" style={{ display: 'none' }}>Processing</option>
-                              <option value="Shipped" style={{ display: 'none' }}>Shipped</option>
-                              <option value="Delivered" style={{ display: 'none' }}>Delivered</option>
-                              <option value="Cancelled" style={{ display: 'none' }}>Cancelled</option>
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Shiprocket Data */}
-                      <div style={{ gridColumn: '1 / -1', background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <h4 style={{ color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', margin: 0 }}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
-                            Tracking Information
-                          </h4>
-                          <span style={{ background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', fontSize: '0.7rem', padding: '3px 8px', borderRadius: '10px', fontWeight: 800, letterSpacing: '0.5px' }}>MANUAL OVERRIDE</span>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
-                           <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>Courier Partner</label>
-                            <input type="text" placeholder="Auto-populated" className={styles.inputField} style={{ background: '#fff', color: '#1e293b', margin: 0, fontWeight: 600 }} value={editingOrder.courierName || ''} onChange={e => setEditingOrder({ ...editingOrder, courierName: e.target.value })} />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>AWB Master Code</label>
-                            <input type="text" placeholder="Pending Generation..." className={styles.inputField} style={{ background: '#fff', color: '#1e293b', margin: 0, fontWeight: 600 }} value={editingOrder.awbCode || ''} onChange={e => setEditingOrder({ ...editingOrder, awbCode: e.target.value })} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Shipping Address */}
-                      <div style={{ gridColumn: '1 / -1', background: '#ffffff', padding: '20px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                          <h4 style={{ marginBottom: '15px', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', marginTop: 0 }}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            Delivery Address
-                          </h4>
-                          <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                            <input type="text" required placeholder="Street / Area" className={styles.inputField} style={{ background: '#fff', margin: 0 }} value={editingOrder.address?.street || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, street: e.target.value } })} />
-                            <div style={{ display: 'flex', gap: '15px' }}>
-                              <input type="text" required placeholder="City" style={{ flex: 1, background: '#fff', margin: 0 }} className={styles.inputField} value={editingOrder.address?.city || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, city: e.target.value } })} />
-                              <input type="text" required placeholder="State" style={{ flex: 1, background: '#fff', margin: 0 }} className={styles.inputField} value={editingOrder.address?.state || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, state: e.target.value } })} />
-                              <input type="text" required placeholder="PIN Code" style={{ flex: 1, background: '#fff', margin: 0 }} className={styles.inputField} value={editingOrder.address?.pinCode || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, pinCode: e.target.value } })} />
-                            </div>
-                          </div>
-                      </div>
-
-                      {/* Order Products Manifest */}
-                      <div style={{ gridColumn: '1 / -1', padding: '20px', background: '#fff', borderRadius: '10px', border: '2px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                          <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem', margin: 0, color: '#1e293b' }}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                            Order Manifest
-                          </h4>
-                          <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#10b981' }}>Total: ₹{editingOrder.totalAmount}</div>
-                        </div>
+                      
+                      <fieldset style={{ border: 'none', padding: 0, margin: 0, gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: '16px', alignItems: 'start' }}>
                         
-                        {(editingOrder.paymentMethod === 'Cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod' || editingOrder.paymentStatus?.toLowerCase().includes('cod')) && editingOrder.totalAmount > 99 && (
-                           <div style={{ marginBottom: '15px', padding: '12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                             <span>🚨 COD Shipment Mode Active</span>
-                             <span style={{ fontSize: '1.1rem', fontWeight: 900 }}>Amount To Collect via Hub: ₹{editingOrder.totalAmount - 99}</span>
-                           </div>
-                        )}
+  {/* LEFT COLUMN: Customer & Order Data */}
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    
+    {/* Customer Info Card */}
+    <div style={{ background: '#ffffff', padding: '16px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <h4 style={{ marginBottom: '12px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', marginTop: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        Customer Identity
+      </h4>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</label>
+          <input required type="text" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.customerName} onChange={e => setEditingOrder({ ...editingOrder, customerName: e.target.value })} />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</label>
+          <input required type="text" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.phone} onChange={e => setEditingOrder({ ...editingOrder, phone: e.target.value })} />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</label>
+          <input required type="email" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.email} onChange={e => setEditingOrder({ ...editingOrder, email: e.target.value })} />
+        </div>
+      </div>
+    </div>
 
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                          {editingOrder.products?.map((item: any, i: number) => (
-                            <li key={i} style={{ padding: '15px', background: '#f8fafc', borderRadius: '8px', marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '10px', border: '1px solid #e2e8f0' }}>
-                              <div style={{ fontWeight: 700, color: '#334155', fontSize: '0.95rem' }}>{item.productId?.name || 'Unknown Product'}</div>
-                              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Quantity</label>
-                                  <input type="number" min="1" className={styles.inputField} style={{ background: '#fff', padding: '8px', margin: 0, width: '100%' }} value={item.quantity} onChange={(e) => {
-                                    const newProducts = [...(editingOrder.products || [])];
-                                    newProducts[i] = { ...newProducts[i], quantity: Number(e.target.value) };
-                                    const newTotal = newProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-                                    setEditingOrder({ ...editingOrder, products: newProducts, totalAmount: newTotal });
-                                  }} />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Unit Price (₹)</label>
-                                  <input type="number" min="0" className={styles.inputField} style={{ background: '#fff', padding: '8px', margin: 0, width: '100%' }} value={item.price} onChange={(e) => {
-                                    const newProducts = [...(editingOrder.products || [])];
-                                    newProducts[i] = { ...newProducts[i], price: Number(e.target.value) };
-                                    const newTotal = newProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
-                                    setEditingOrder({ ...editingOrder, products: newProducts, totalAmount: newTotal });
-                                  }} />
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginLeft: 'auto', minWidth: '80px' }}>
-                                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>Subtotal</label>
-                                  <span style={{ fontWeight: 900, color: '#1e293b', fontSize: '1.1rem' }}>₹{item.price * item.quantity}</span>
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+    {/* Shipping Address */}
+    <div style={{ background: '#ffffff', padding: '16px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        <h4 style={{ marginBottom: '12px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', marginTop: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          Delivery Address
+        </h4>
+        <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+          <input type="text" required placeholder="Street / Area" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.address?.street || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, street: e.target.value } })} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '10px' }}>
+            <input type="text" required placeholder="City" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.address?.city || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, city: e.target.value } })} />
+            <input type="text" required placeholder="State" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.address?.state || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, state: e.target.value } })} />
+            <input type="text" required placeholder="PIN Code" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.address?.pinCode || ''} onChange={e => setEditingOrder({ ...editingOrder, address: { ...editingOrder.address, pinCode: e.target.value } })} />
+          </div>
+        </div>
+    </div>
 
-                      <button type="submit" disabled={isSubmitting} style={{ gridColumn: '1 / -1', marginTop: '10px', background: 'linear-gradient(to right, var(--color-primary), #16a34a)', color: 'white', border: 'none', padding: '16px 24px', borderRadius: '12px', fontWeight: 800, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '1.2rem', boxShadow: '0 10px 25px rgba(22, 163, 74, 0.4)', transition: 'all 0.2s', width: '100%' }}>
-                        {isSubmitting ? 'Saving Details...' : 'Save Changes'}
-                      </button>
-                      </fieldset>
+    {/* Order Products Manifest */}
+    <div style={{ padding: '16px', background: '#fff', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', margin: 0, color: '#1e293b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+          Order Manifest
+        </h4>
+        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#10b981' }}>Total: ₹{editingOrder.totalAmount}</div>
+      </div>
+      
+      {(editingOrder.paymentMethod === 'Cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod' || editingOrder.paymentStatus?.toLowerCase().includes('cod')) && editingOrder.totalAmount > 99 && (
+         <div style={{ marginBottom: '12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', color: '#991b1b', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🚨 COD Mode Active</span>
+           <span style={{ fontSize: '0.9rem', fontWeight: 900 }}>To Collect: ₹{editingOrder.totalAmount - 99}</span>
+         </div>
+      )}
+
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '130px', overflowY: 'auto' }}>
+        {editingOrder.products?.map((item: any, i: number) => (
+          <li key={i} style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '4px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid #cbd5e1' }}>
+            <div style={{ fontWeight: 700, color: '#334155', fontSize: '0.8rem' }}>{item.productId?.name || 'Unknown Product'}</div>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginTop: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Qty:</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b' }}>{item.quantity}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Unit Price:</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b' }}>₹{item.price}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginRight: '6px' }}>Subtotal:</span>
+                <span style={{ fontWeight: 900, color: '#10b981', fontSize: '0.95rem' }}>₹{item.price * item.quantity}</span>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+
+  {/* RIGHT COLUMN: State, Finance & Tracking */}
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    
+    {/* Payment & Status Card */}
+    <div style={{ background: '#ffffff', padding: '16px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <h4 style={{ marginBottom: '12px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', marginTop: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Transaction Details
+      </h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Method</label>
+          <input 
+            type="text" 
+            readOnly 
+            style={{ background: '#f1f5f9', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500, cursor: 'not-allowed' }} 
+            value={(editingOrder.paymentMethod?.toLowerCase() === 'cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod') ? 'Cash on Delivery (COD)' : 'Online Payment'} 
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Financial Status</label>
+          <select style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.paymentStatus || 'paid'} onChange={e => setEditingOrder({ ...editingOrder, paymentStatus: e.target.value })}>
+            <option value="payment processing/pending">Payment Processing/Pending</option>
+            <option value="paid">Paid (Pre-Paid & Advances)</option>
+            <option value="payment failed">Payment Failed</option>
+            <option value="refund initiated">Refund Initiated</option>
+            <option value="refunded">Refunded (Completed)</option>
+            <option value="refund failed">Refund Failed</option>
+          </select>
+        </div>
+        
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Received Payment</label>
+          {(() => {
+            const hasFailedOrPending = ['payment failed', 'pending', 'payment processing', 'payment processing/pending'].includes(editingOrder.paymentStatus?.toLowerCase() || '');
+            if (hasFailedOrPending) {
+              return (
+                <div style={{ background: '#f1f5f9', padding: '10px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#475569', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  ₹{editingOrder.totalAmount || 0}
+                  <span style={{ fontSize: '0.7rem', color: '#475569', opacity: 0.8, fontWeight: 700, marginLeft: '6px' }}>(Unpaid / Not Captured)</span>
+                </div>
+              );
+            }
+            return (
+              <div style={{ background: '#dcfce7', padding: '10px 12px', borderRadius: '4px', border: '1px solid #bbf7d0', color: '#166534', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px' }}><polyline points="20 6 9 17 4 12"></polyline></svg>
+                ₹{(editingOrder.paymentMethod?.toLowerCase() === 'cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod') ? '99' : (editingOrder.totalAmount || 0)}
+                <span style={{ fontSize: '0.7rem', color: '#166534', opacity: 0.8, fontWeight: 700, marginLeft: '6px' }}>{(editingOrder.paymentMethod?.toLowerCase() === 'cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod') ? '(Partial Advance)' : '(Full Payment)'}</span>
+              </div>
+            );
+          })()}
+        </div>
+        
+        {/* Secure Refund Automation Block */}
+        {(editingOrder.status === 'CANCELLED' || editingOrder.status === 'RTO') && 
+         (editingOrder.paymentMethod?.toLowerCase() !== 'cash' && editingOrder.paymentMethod?.toLowerCase() !== 'cod') && 
+         ['paid', 'refund failed'].includes(editingOrder.paymentStatus?.toLowerCase() || '') && (
+          <div style={{ marginTop: '8px', background: '#f8fafc', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Refund Configuration</label>
+              <select value={refundType} onChange={e => setRefundType(e.target.value as any)} style={{ background: '#fff', width: '100%', padding: '8px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', marginBottom: '8px', color: '#1e293b', fontWeight: 600 }}>
+                <option value="full">Full Refund (₹{(editingOrder.totalAmount || 0)})</option>
+                <option value="deduct_99">Deduct ₹99 Shipping (₹{Math.max(0, (editingOrder.totalAmount || 0) - 99)})</option>
+              </select>
+            </div>
+
+            <button onClick={handleProcessRefund} disabled={isSubmitting || !editingOrder.paymentId} type="button" style={{ width: '100%', padding: '10px', background: '#ef4444', color: 'white', fontWeight: 800, border: 'none', borderRadius: '4px', cursor: (isSubmitting || !editingOrder.paymentId) ? 'not-allowed' : 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              {isSubmitting ? 'Processing...' : 'Issue Gateway Refund'}
+            </button>
+            {!editingOrder.paymentId && (
+              <p style={{ color: '#ef4444', fontSize: '0.7rem', marginTop: '6px', textAlign: 'center', margin: '6px 0 0 0' }}>Missing Gateway Reference.</p>
+            )}
+          </div>
+        )}
+        
+        {/* Real-time Refund Timeline */}
+        {liveRefunds.length > 0 && (
+          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Gateway Refund Timeline</label>
+            {isFetchingLiveRefunds ? (
+               <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Syncing timeline with Razorpay...</p>
+            ) : (
+               liveRefunds.map((ref: any, idx: number) => {
+                 const statusColors: Record<string, {bg: string, border: string, color: string}> = {
+                   processed: { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
+                   failed: { bg: '#fef2f2', border: '#fecaca', color: '#991b1b' },
+                   pending: { bg: '#fdf8e3', border: '#fef08a', color: '#854d0e' },
+                 };
+                 const theme = statusColors[ref.status] || { bg: '#f8fafc', border: '#e2e8f0', color: '#475569' };
+
+                 return (
+                   <div key={idx} style={{ background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '4px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.color, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                         {ref.status === 'processed' ? 'Refunded Success' : ref.status === 'failed' ? 'Refund Failed' : ref.status}
+                       </span>
+                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: theme.color }}>₹{(ref.amount / 100).toFixed(2)}</span>
+                     </div>
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', color: '#475569' }}>
+                       <div><strong style={{ opacity: 0.8 }}>Initiated:</strong> {new Date(ref.created_at * 1000).toLocaleString('en-IN')}</div>
+                       {ref.status === 'processed' && <div><strong style={{ opacity: 0.8 }}>Processed:</strong> {new Date(ref.created_at * 1000).toLocaleString('en-IN')} (Bank Accepted)</div>}
+                       {ref.status === 'failed' && (
+                         <div style={{ color: '#991b1b', marginTop: '2px' }}>
+                           <strong style={{ opacity: 0.8 }}>Failed Reason:</strong> {ref.error_description || ref.status_details?.reason || 'Bank validation rejected. Please initiate again.'}
+                         </div>
+                       )}
+                       {ref.arn && <div><strong style={{ opacity: 0.8 }}>Bank Ref (ARN):</strong> {ref.arn}</div>}
+                       <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>Razorpay Record: {ref.id}</div>
+                     </div>
+                   </div>
+                 );
+               })
+            )}
+          </div>
+        )}
+
+        {/* Fallback Display for Unlinkable Refunds */}
+        {liveRefunds.length === 0 && !isFetchingLiveRefunds && editingOrder.refundId && ['refund initiated', 'refunded', 'refund failed'].includes(editingOrder.paymentStatus?.toLowerCase() || '') && (
+           <div style={{ marginTop: '8px', background: '#f8fafc', padding: '8px 12px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#475569', fontSize: '0.8rem', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+             <span style={{ display: 'flex', alignItems: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> System Refund Record</span>
+             <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Tracker ID: {editingOrder.refundId}</span>
+             <span style={{ fontSize: '0.65rem', fontStyle: 'italic', color: '#94a3b8' }}>Real-time Gateway timeline currently unavailable.</span>
+           </div>
+        )}
+      </div>
+    </div>
+
+    {/* Operational Status */}
+    <div style={{ background: '#ffffff', padding: '16px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <h4 style={{ marginBottom: '12px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', marginTop: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+        Fulfillment Action
+      </h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order Stage</label>
+          <select 
+            style={{ background: ['payment failed', 'pending', 'payment processing', 'payment processing/pending', 'refunded'].includes(editingOrder.paymentStatus?.toLowerCase() || '') ? '#f1f5f9' : '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500, cursor: ['payment failed', 'pending', 'payment processing', 'payment processing/pending', 'refunded'].includes(editingOrder.paymentStatus?.toLowerCase() || '') ? 'not-allowed' : 'pointer' }} 
+            value={editingOrder.status} 
+            onChange={e => setEditingOrder({ ...editingOrder, status: e.target.value })}
+            disabled={['payment failed', 'pending', 'payment processing', 'payment processing/pending', 'refunded'].includes(editingOrder.paymentStatus?.toLowerCase() || '')}
+          >
+            <option value="NEW">🚀 NEW - Unconfirmed</option>
+            <option value="CONFIRMED">📦 CONFIRMED - Pack</option>
+            <option value="READY_TO_SHIP">🏷️ READY TO SHIP</option>
+            <option value="SHIPPED">🚚 SHIPPED - In Transit</option>
+            <option value="IN_TRANSIT">🔄 IN TRANSIT</option>
+            <option value="DELIVERED">✅ DELIVERED</option>
+            <option value="RTO">❌ RTO - Return</option>
+            <option value="CANCELLED">🛑 CANCELLED</option>
+            <option value="Pending" style={{ display: 'none' }}>Pending</option>
+            <option value="Processing" style={{ display: 'none' }}>Processing</option>
+            <option value="Shipped" style={{ display: 'none' }}>Shipped</option>
+            <option value="Delivered" style={{ display: 'none' }}>Delivered</option>
+            <option value="Cancelled" style={{ display: 'none' }}>Cancelled</option>
+          </select>
+          
+          {['pending', 'payment processing', 'payment processing/pending'].includes(editingOrder.paymentStatus?.toLowerCase() || '') && (
+             <div style={{ color: '#f59e0b', fontSize: '0.7rem', marginTop: '6px', fontWeight: 600 }}>Action locked until payment completes.</div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* Shiprocket Data */}
+    <div style={{ background: '#ffffff', padding: '16px', borderRadius: '4px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h4 style={{ color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.95rem', margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+          Tracking Info
+        </h4>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+         <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Courier Partner</label>
+          <input type="text" placeholder="Auto-populated" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 600 }} value={editingOrder.courierName || ''} onChange={e => setEditingOrder({ ...editingOrder, courierName: e.target.value })} />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AWB Code</label>
+          <input type="text" placeholder="Pending Generation..." style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 600 }} value={editingOrder.awbCode || ''} onChange={e => setEditingOrder({ ...editingOrder, awbCode: e.target.value })} />
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {/* Save Actions */}
+  <div style={{ gridColumn: '1 / -1', marginTop: '4px' }}>
+    <button type="submit" disabled={isSubmitting} style={{ background: '#0f172a', color: 'white', border: 'none', padding: '14px 20px', borderRadius: '4px', fontWeight: 800, cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px', transition: 'all 0.2s', width: '100%', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+      {isSubmitting ? 'Saving Details...' : 'Save Changes'}
+    </button>
+  </div>
+</fieldset>
                     </form>
                   </div>
                 ) : (() => {
@@ -814,6 +929,14 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                     if (searchLower.trim() !== '') return true;
 
                     if (orderFilterTab === 'All') return true;
+                    if (orderFilterTab === 'FAILED') return o.paymentStatus === 'payment failed';
+                    if (orderFilterTab === 'REFUNDED') return o.paymentStatus === 'refunded';
+                    if (orderFilterTab === 'PENDING_PAYMENT') return o.paymentStatus === 'pending' || o.paymentStatus === 'payment processing' || o.paymentStatus === 'payment processing/pending';
+
+                    // Normal pipeline shouldn't show these edge cases
+                    const isPaymentPending = o.paymentStatus === 'pending' || o.paymentStatus === 'payment processing' || o.paymentStatus === 'payment processing/pending';
+                    if (isPaymentPending) return false;
+
                     if (orderFilterTab === 'NEW') return o.status === 'Pending' || o.status === 'NEW';
                     if (orderFilterTab === 'CONFIRMED') return o.status === 'Processing' || o.status === 'CONFIRMED';
                     if (orderFilterTab === 'READY_TO_SHIP') return o.status === 'READY_TO_SHIP';
@@ -834,7 +957,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
                     if (e.target.checked) {
                       const selectableOrders = paginatedOrders.filter(o =>
-                        !(o.paymentStatus === 'payment processing' || o.paymentStatus === 'pending' || o.paymentStatus === 'payment failed')
+                        !(o.paymentStatus === 'payment processing' || o.paymentStatus === 'pending')
                       );
                       setSelectedOrders(new Set(selectableOrders.map(o => o._id)));
                     } else {
@@ -846,11 +969,18 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                     <div>
                       {/* Modern Sub-Navigation */}
                       <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', padding: '10px', background: 'white', borderRadius: '12px', overflowX: 'auto', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-                        {['NEW', 'CONFIRMED', 'READY_TO_SHIP', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RTO', 'CANCELLED', 'All'].map(t => {
+                        {['NEW', 'CONFIRMED', 'READY_TO_SHIP', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RTO', 'CANCELLED', 'FAILED', 'PENDING_PAYMENT', 'All'].map(t => {
                           const isActive = orderFilterTab === t;
                           const count = orders.filter(o => {
                             if (o.paymentStatus === 'draft_intent') return false;
                             if (t === 'All') return true;
+                            if (t === 'FAILED') return o.paymentStatus === 'payment failed';
+                            if (t === 'REFUNDED') return o.paymentStatus === 'refunded';
+                            if (t === 'PENDING_PAYMENT') return o.paymentStatus === 'pending' || o.paymentStatus === 'payment processing' || o.paymentStatus === 'payment processing/pending';
+
+                            const isPaymentPending = o.paymentStatus === 'pending' || o.paymentStatus === 'payment processing' || o.paymentStatus === 'payment processing/pending';
+                            if (isPaymentPending) return false;
+
                             if (t === 'NEW') return o.status === 'Pending' || o.status === 'NEW';
                             if (t === 'CONFIRMED') return o.status === 'Processing' || o.status === 'CONFIRMED';
                             if (t === 'READY_TO_SHIP') return o.status === 'READY_TO_SHIP';
@@ -865,7 +995,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                           return (
                             <button
                               key={t}
-                              onClick={() => { setOrderFilterTab(t); setOrderPage(1); setSelectedOrders(new Set()); }}
+                              onClick={() => { setOrderFilterTab(t); setOrderPage(1); setSelectedOrders(new Set()); setOrderSearch(''); }}
                               style={{
                                 padding: '8px 16px',
                                 fontWeight: 600,
@@ -888,7 +1018,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                         })}
                       </div>
 
-                      <div className={styles.productsToolbar} style={{ marginBottom: '1.5rem', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px' }}>
+                      <div className={styles.productsToolbar} style={{ marginBottom: '0.8rem', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px' }}>
                         <div className={styles.searchBar} style={{ maxWidth: '400px', flex: 1 }}>
                           <svg className={styles.searchIcon} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                           <input
@@ -909,8 +1039,13 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                 );
                                 if (matchingOrders.length === 1) {
                                   const status = matchingOrders[0].status;
+                                  const pStatus = matchingOrders[0].paymentStatus?.toLowerCase() || '';
                                   let newTab = 'All';
-                                  if (status === 'Pending' || status === 'NEW') newTab = 'NEW';
+                                  
+                                  if (pStatus === 'payment failed') newTab = 'FAILED';
+                                  else if (pStatus === 'refunded') newTab = 'REFUNDED';
+                                  else if (pStatus === 'pending' || pStatus === 'payment processing' || pStatus === 'payment processing/pending') newTab = 'PENDING_PAYMENT';
+                                  else if (status === 'Pending' || status === 'NEW') newTab = 'NEW';
                                   else if (status === 'Processing' || status === 'CONFIRMED') newTab = 'CONFIRMED';
                                   else if (status === 'READY_TO_SHIP') newTab = 'READY_TO_SHIP';
                                   else if (status === 'Shipped' || status === 'SHIPPED') newTab = 'SHIPPED';
@@ -991,23 +1126,25 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                         <table className={styles.table}>
                           <thead>
                             <tr>
-                              <th style={{ width: '40px', textAlign: 'center', padding: '10px 12px' }}>
+                              <th style={{ fontSize: '0.8rem', width: '40px', textAlign: 'center', padding: '8px 10px' }}>
                                 <input type="checkbox" onChange={handleSelectAll} checked={paginatedOrders.length > 0 && paginatedOrders.every(o => selectedOrders.has(o._id))} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
                               </th>
-                              <th style={{ padding: '10px 12px' }}>Order ID</th>
-                              <th style={{ padding: '10px 12px' }}>Customer & Contact</th>
-                              <th style={{ padding: '10px 12px' }}>Amount</th>
-                              <th style={{ padding: '10px 12px' }}>Date</th>
-                              <th style={{ padding: '10px 12px' }}>Status & Action</th>
+                              <th style={{ fontSize: '0.8rem', padding: '8px 10px' }}>Order ID</th>
+                              <th style={{ fontSize: '0.8rem', padding: '8px 10px' }}>Customer & Contact</th>
+                              <th style={{ fontSize: '0.8rem', padding: '8px 10px' }}>Amount</th>
+                              <th style={{ fontSize: '0.8rem', padding: '8px 10px' }}>Payment Status</th>
+                              <th style={{ fontSize: '0.8rem', padding: '8px 10px' }}>Date</th>
+                              <th style={{ fontSize: '0.8rem', padding: '8px 10px' }}>Fulfillment Status</th>
+                              <th style={{ fontSize: '0.8rem', padding: '8px 10px', textAlign: 'right' }}>Action</th>
                             </tr>
                           </thead>
                           <tbody>
                             {paginatedOrders.map(o => {
-                              const blockSelection = o.paymentStatus === 'payment processing' || o.paymentStatus === 'pending' || o.paymentStatus === 'payment failed';
+                              const blockSelection = o.paymentStatus === 'payment processing' || o.paymentStatus === 'pending';
 
                               return (
-                                <tr key={o._id} style={{ background: selectedOrders.has(o._id) ? '#f0fdf4' : blockSelection ? '#f8fafc' : 'transparent', transition: 'background 0.2s', opacity: blockSelection ? 0.6 : 1 }}>
-                                  <td style={{ textAlign: 'center', padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                                <tr key={o._id} style={{ background: selectedOrders.has(o._id) ? '#f0fdf4' : blockSelection ? '#f8fafc' : 'transparent', transition: 'background 0.2s', opacity: 1 }}>
+                                  <td style={{ textAlign: 'center', padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                                     <input
                                       type="checkbox"
                                       checked={selectedOrders.has(o._id)}
@@ -1017,54 +1154,57 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                       title={blockSelection ? "Cannot ship: Payment not successfully captured" : ""}
                                     />
                                   </td>
-                                  <td style={{ fontWeight: 600, padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>#{o._id.slice(-6).toUpperCase()}</td>
-                                  <td style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+                                  <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>#{o._id.slice(-6).toUpperCase()}</td>
+                                  <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                                     <strong>{o.customerName}</strong><br />
-                                    <span style={{ color: 'var(--color-text-light)', fontSize: '0.9rem' }}>{o.phone}</span>
+                                    <span style={{ color: 'var(--color-text-light)', fontSize: '0.6rem' }}>{o.phone}</span>
                                   </td>
-                                  <td style={{ fontWeight: 700, color: 'var(--color-tertiary)', padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
-                                    Total: ₹{o.totalAmount}<br />
-                                    {(o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod' || o.paymentStatus?.toLowerCase().includes('cod')) && o.totalAmount > 75 && (
-                                      <span style={{ color: '#ef4444', fontSize: '0.85rem', display: 'block', margin: '2px 0' }}>
-                                        To Collect: ₹{o.totalAmount - 75}
-                                      </span>
+                                  <td style={{ fontWeight: 700, color: 'var(--color-tertiary)', padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
+                                    ₹{o.totalAmount}
+                                    {(o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod' || o.paymentStatus?.toLowerCase().includes('cod')) && (
+                                      <div style={{ color: '#ef4444', fontSize: '0.6rem', marginTop: '4px' }}>
+                                        COD (Bal: ₹{o.totalAmount > 99 ? o.totalAmount - 99 : o.totalAmount})
+                                      </div>
                                     )}
+                                  </td>
+                                  <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                                     <span style={{
-                                      fontSize: '0.75rem',
-                                      fontWeight: 600,
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      color: o.paymentStatus === 'paid' ? '#10b981' : o.paymentStatus === 'payment failed' ? '#ef4444' : '#f59e0b',
-                                      background: o.paymentStatus === 'paid' ? '#d1fae5' : o.paymentStatus === 'payment failed' ? '#fee2e2' : '#fef3c7',
-                                      textTransform: 'uppercase'
+                                      fontSize: '0.6rem',
+                                      fontWeight: 700,
+                                      padding: '4px 10px',
+                                      borderRadius: '20px',
+                                      color: o.paymentStatus === 'paid' ? '#166534' : o.paymentStatus === 'payment failed' ? '#991b1b' : o.paymentStatus === 'refunded' ? '#475569' : '#92400e',
+                                      background: o.paymentStatus === 'paid' ? '#dcfce7' : o.paymentStatus === 'payment failed' ? '#fee2e2' : o.paymentStatus === 'refunded' ? '#f1f5f9' : '#fef3c7',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.5px',
+                                      border: o.paymentStatus === 'refunded' ? '1px solid #cbd5e1' : 'none'
                                     }}>
-                                      {o.paymentStatus || 'cod'}
+                                      {o.paymentStatus === 'paid' && (o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod') ? 'Advance Paid' : (o.paymentStatus || 'pending')}
                                     </span>
                                   </td>
-                                  <td style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
-                                    {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}<br />
-                                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                      {new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                                    </span>
+                                  <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>
+                                    <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.65rem' }}>{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                                    <div style={{ fontSize: '0.55rem', color: '#64748b', marginTop: '2px' }}>{new Date(o.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
                                   </td>
-                                  <td style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
-                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                  <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                                       <span style={{
                                         display: 'inline-block',
                                         padding: '4px 10px',
-                                        borderRadius: '6px',
+                                        borderRadius: '20px',
                                         background: (o.status === 'DELIVERED' || o.status === 'Delivered') ? '#dcfce7' : (o.status === 'CANCELLED' || o.status === 'Cancelled' || o.status === 'RTO') ? '#fee2e2' : (o.status === 'SHIPPED' || o.status === 'Shipped' || o.status === 'IN_TRANSIT' || o.status === 'READY_TO_SHIP') ? '#dbeafe' : '#fef3c7',
                                         color: (o.status === 'DELIVERED' || o.status === 'Delivered') ? '#166534' : (o.status === 'CANCELLED' || o.status === 'Cancelled' || o.status === 'RTO') ? '#991b1b' : (o.status === 'SHIPPED' || o.status === 'Shipped' || o.status === 'IN_TRANSIT' || o.status === 'READY_TO_SHIP') ? '#1e40af' : '#92400e',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 600,
-                                        textTransform: 'uppercase'
+                                        fontSize: '0.6rem',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px'
                                       }}>
-                                        {o.status}
+                                        {(o.status === 'RTO' || o.status === 'rto') ? 'RETURN TO ORIGIN' : o.status}
                                       </span>
-                                      <button className={styles.adminWhiteBtn} style={{ padding: '4px 12px', fontSize: '0.8rem', whiteSpace: 'nowrap', pointerEvents: 'auto' }} onClick={() => { setEditingOrder(o); setIsEditingOrder(true); }}>
-                                        View / Edit Details
+                                  </td>
+                                  <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>
+                                      <button className={styles.adminWhiteBtn} style={{ padding: '6px 14px', fontSize: '0.65rem', whiteSpace: 'nowrap', pointerEvents: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#334155' }} onClick={() => { setEditingOrder(o); setIsEditingOrder(true); setRefundType('full'); }}>
+                                        Manage <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                                       </button>
-                                    </div>
                                   </td>
                                 </tr>
                               );

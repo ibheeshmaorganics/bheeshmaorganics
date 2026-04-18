@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       if (paymentId) {
         await prisma.order.updateMany({
           where: { paymentId: paymentId },
-          data: { paymentStatus: 'payment failed' } // Revert to failed or maintain refund initiated state depending on business logic, but typically flag as failed
+          data: { paymentStatus: 'refund failed' }
         });
         console.error(`[WEBHOOK] BANK REFUND FAILED for ${refundId}. Please check Razorpay Dashboard.`);
       }

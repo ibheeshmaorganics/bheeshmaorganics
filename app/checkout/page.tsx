@@ -93,7 +93,9 @@ export default function CheckoutPage() {
           products: cartItems.map(item => ({
             productId: item._id,
             quantity: item.quantity,
-            price: item.price
+            price: item.price,
+            name: item.name,
+            image: item.imageUrl || (item.images && item.images[0]) || ''
           })),
           totalAmount: finalTotalAmount,
           paymentMethod: formData.paymentMethod
