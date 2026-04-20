@@ -37,7 +37,7 @@ export default function Home() {
     <div className={styles.main}>
       {/* Hero Section */}
       <section className={styles.hero}>
-        <Image src="/images/hero_herbal_bg.png" alt="Herbal Landscape Background" fill priority sizes="100vw" style={{ objectFit: 'cover', zIndex: -1, pointerEvents: 'none' }} />
+        <Image src="https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/hero_herbal_bg" alt="Herbal Landscape Background" fill priority sizes="100vw" style={{ objectFit: 'cover', zIndex: -1, pointerEvents: 'none' }} />
         <div className={styles.blob1}></div>
         <div className={styles.blob2}></div>
 
@@ -91,7 +91,7 @@ export default function Home() {
           <div
             className={styles.heroImageContainer}
           >
-            <Image src="/images/group_products.png" alt="Bheeshma Organics Product Collection" fill sizes="(max-width: 768px) 100vw, 380px" className={styles.heroMainImage} style={{ objectFit: 'cover' }} priority />
+            <Image src="https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/group_products" alt="Bheeshma Organics Product Collection" fill sizes="(max-width: 768px) 100vw, 380px" className={styles.heroMainImage} style={{ objectFit: 'cover' }} priority />
           </div>
         </div>
       </section>
@@ -124,11 +124,11 @@ export default function Home() {
             viewport={{ once: true, margin: "-50px" }}
           >
             {[
-              { icon: '/images/quality.png', text: 'Quality Ingredients', desc: 'Sourced purely from nature' },
-              { icon: '/images/herbal.png', text: 'Herbal Formulations', desc: 'Rooted in traditional science' },
-              { icon: '/images/botanical.png', text: 'Botanical Extracts', desc: 'Potency in every drop' },
-              { icon: '/images/manufactured.png', text: 'Carefully Manufactured', desc: 'Highest hygiene standards' },
-              { icon: '/images/ayurvedic.png', text: 'Ayurvedic Inspired', desc: 'Balancing mind & body' }
+              { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/quality', text: 'Quality Ingredients', desc: 'Sourced purely from nature' },
+              { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/herbal', text: 'Herbal Formulations', desc: 'Rooted in traditional science' },
+              { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/botanical', text: 'Botanical Extracts', desc: 'Potency in every drop' },
+              { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/manufactured', text: 'Carefully Manufactured', desc: 'Highest hygiene standards' },
+              { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/ayurvedic', text: 'Ayurvedic Inspired', desc: 'Balancing mind & body' }
             ].map((item, i) => (
               <motion.div key={i} variants={fadeUp} className={styles.brandItem}>
                 <div className={styles.brandImageWrapper}>
@@ -161,12 +161,12 @@ export default function Home() {
             {/* Desktop View */}
             <div className={styles.whyGrid}>
               {[
-                { icon: '/images/pure_organic.png', title: '100% Pure & Organic', text: 'No artificial additives, fillers, or harmful chemicals. We source only the finest raw botanical ingredients.' },
-                { icon: '/images/himalayan_sourced.png', title: 'Himalayan Sourced', text: 'Our Sea Buckthorn is carefully hand-harvested from the pristine altitudes of the Himalayas for maximum potency.' },
-                { icon: '/images/gmp_certified.png', title: 'GMP Certified Quality', text: 'Manufactured in state-of-the-art facilities following strict purity, safety, and hygiene standards.' },
-                { icon: '/images/ethical_sustainable.png', title: 'Ethical & Sustainable', text: 'We believe in giving back to nature and supporting local farming communities with fair trade practices.' },
-                { icon: '/images/quality.png', title: 'Clinically Proven', text: 'Our formulations are rigorously tested for safety, efficacy, and nutritional value before ever reaching your home.' },
-                { icon: '/images/ayurvedic.png', title: 'Ayurvedic Heritage', text: 'We honor ancient Indian medicinal wisdom, perfectly balancing modern scientific extraction with traditional healing methods.' }
+                { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/pure_organic', title: '100% Pure & Organic', text: 'No artificial additives, fillers, or harmful chemicals. We source only the finest raw botanical ingredients.' },
+                { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/himalayan_sourced', title: 'Himalayan Sourced', text: 'Our Sea Buckthorn is carefully hand-harvested from the pristine altitudes of the Himalayas for maximum potency.' },
+                { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/gmp_certified', title: 'GMP Certified Quality', text: 'Manufactured in state-of-the-art facilities following strict purity, safety, and hygiene standards.' },
+                { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/ethical_sustainable', title: 'Ethical & Sustainable', text: 'We believe in giving back to nature and supporting local farming communities with fair trade practices.' },
+                { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/quality', title: 'Clinically Proven', text: 'Our formulations are rigorously tested for safety, efficacy, and nutritional value before ever reaching your home.' },
+                { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/ayurvedic', title: 'Ayurvedic Heritage', text: 'We honor ancient Indian medicinal wisdom, perfectly balancing modern scientific extraction with traditional healing methods.' }
               ].map((feature, idx) => (
                 <motion.div
                   key={idx}
@@ -189,12 +189,12 @@ export default function Home() {
             <div className={styles.mobileMarquee}>
               <Marquee speed={40} gradient={false} pauseOnHover={true}>
                 {[
-                  { icon: '/images/pure_organic.png', title: '100% Pure & Organic', text: 'No artificial additives, fillers, or harmful chemicals. We source only the finest raw botanical ingredients.' },
-                  { icon: '/images/himalayan_sourced.png', title: 'Himalayan Sourced', text: 'Our Sea Buckthorn is carefully hand-harvested from the pristine altitudes of the Himalayas for maximum potency.' },
-                  { icon: '/images/gmp_certified.png', title: 'GMP Certified Quality', text: 'Manufactured in state-of-the-art facilities following strict purity, safety, and hygiene standards.' },
-                  { icon: '/images/ethical_sustainable.png', title: 'Ethical & Sustainable', text: 'We believe in giving back to nature and supporting local farming communities with fair trade practices.' },
-                  { icon: '/images/quality.png', title: 'Clinically Proven', text: 'Our formulations are rigorously tested for safety, efficacy, and nutritional value before ever reaching your home.' },
-                  { icon: '/images/ayurvedic.png', title: 'Ayurvedic Heritage', text: 'We honor ancient Indian medicinal wisdom, perfectly balancing modern scientific extraction with traditional healing methods.' }
+                  { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/pure_organic', title: '100% Pure & Organic', text: 'No artificial additives, fillers, or harmful chemicals. We source only the finest raw botanical ingredients.' },
+                  { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/himalayan_sourced', title: 'Himalayan Sourced', text: 'Our Sea Buckthorn is carefully hand-harvested from the pristine altitudes of the Himalayas for maximum potency.' },
+                  { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/gmp_certified', title: 'GMP Certified Quality', text: 'Manufactured in state-of-the-art facilities following strict purity, safety, and hygiene standards.' },
+                  { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/ethical_sustainable', title: 'Ethical & Sustainable', text: 'We believe in giving back to nature and supporting local farming communities with fair trade practices.' },
+                  { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/quality', title: 'Clinically Proven', text: 'Our formulations are rigorously tested for safety, efficacy, and nutritional value before ever reaching your home.' },
+                  { icon: 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/ayurvedic', title: 'Ayurvedic Heritage', text: 'We honor ancient Indian medicinal wisdom, perfectly balancing modern scientific extraction with traditional healing methods.' }
                 ].map((feature, idx) => (
                   <div key={`m-${idx}`} className={styles.whyCardMobile}>
                     <div className={styles.whyImageWrapper}>

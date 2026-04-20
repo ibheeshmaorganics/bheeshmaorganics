@@ -160,7 +160,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
         justifyContent: 'center',
         minHeight: '40vh'
       }}>
-        <img src="/images/shop_hero_bg.png" alt="Shop Hero Background" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }} />
+        <img src="https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/shop_hero_bg" alt="Shop Hero Background" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(16, 42, 28, 0.5)', zIndex: 1 }}></div>
         <div
           className="container"

@@ -151,9 +151,6 @@
   max-width: 380px;
   height: auto;
   border-radius: 32px;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-  /* Very light elegant border */
-  background: white;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.12);
   transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 1s ease;
   object-fit: cover;
