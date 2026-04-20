@@ -2,39 +2,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { toast, Toaster } from 'sonner';
+import { type CartItem } from '@/lib/cart';
+import { useCart } from '@/hooks/useCart';
+import { upsertCartItem, updateCartItemQuantity } from '@/lib/cart-operations';
+import { getAllVariants, getVariantPrice, type VariantOption } from '@/lib/product-variants';
+import { ProductImageCarousel } from './components/ProductImageCarousel';
+import { QuantityStepper } from './components/QuantityStepper';
+import { AddToCartButton } from './components/AddToCartButton';
 
-interface Product { _id: string; name: string; category: string; price: number; discount?: number; images?: string[]; imageUrl?: string; description?: string; inStock?: boolean; variants?: any[]; quantity?: number; unit?: string; }
-
-function ProductImageCarousel({ images, name }: { images: string[], name: string }) {
-  if (!images || images.length === 0) return <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🌿</div>;
-  if (images.length === 1) {
-    return (
-      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-        <Image src={images[0]} alt={name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority style={{ objectFit: 'cover', objectPosition: 'top', borderRadius: '8px' }} />
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
-      <div style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', width: '100%', height: '100%', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollBehavior: 'smooth' }}>
-        {images.map((img, i) => (
-          <div key={i} style={{ width: '100%', height: '100%', position: 'relative', flexShrink: 0, scrollSnapAlign: 'start' }}>
-            <Image src={img} alt={name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority={i === 0} style={{ objectFit: 'cover', objectPosition: 'top' }} />
-          </div>
-        ))}
-      </div>
-      <div style={{ position: 'absolute', bottom: '8px', width: '100%', display: 'flex', justifyContent: 'center', gap: '6px', pointerEvents: 'none' }}>
-        {images.map((_, i) => (
-          <span key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(0,0,0,0.1)', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
-        ))}
-      </div>
-    </div>
-  );
-}
+interface Product { _id: string; name: string; category: string; price: number; discount?: number; images?: string[]; imageUrl?: string; description?: string; inStock?: boolean; variants?: VariantOption[]; quantity?: number; unit?: string; }
 
 export default function ClientProductGrid({ products: initialProducts }: { products: Product[] }) {
   const router = useRouter();
@@ -57,7 +35,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
 
         if (data && data.products) {
           // Compare strings or just set state, React avoids DOM repaints if data is structurally identical
-          setProducts(data.products.map((p: any) => ({
+          setProducts((data.products as Product[]).map((p) => ({
             ...p,
             category: '100% Organic',
             discount: p.discount || 0,
@@ -90,45 +68,35 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
     return () => window.removeEventListener('scroll', handleScroll);
   }, [products.length, visibleCount]);
 
-  const [cart, setCart] = useState<any[]>([]);
+  const { cart, syncCart } = useCart();
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    setCart(JSON.parse(localStorage.getItem('bheeshma_cart') || '[]'));
-  }, []);
-
-  const updateCart = (newCart: any[]) => {
-    setCart(newCart);
-    localStorage.setItem('bheeshma_cart', JSON.stringify(newCart));
+  const updateCart = (newCart: CartItem[]) => {
+    syncCart(newCart);
   };
 
   const handleAddToCart = (product: Product, variantIndex: number = -1) => {
     if (product.inStock === false) return;
 
-    const hasVariants = product.variants && product.variants.length > 0;
-    const allVariants = hasVariants
-      ? [{ size: `${product.quantity || 1} ${product.unit || 'kg'}`, price: product.price }, ...product.variants!]
-      : [{ size: `${product.quantity || 1} ${product.unit || 'kg'}`, price: product.price }];
+    const allVariants = getAllVariants(product);
 
     const variant = variantIndex >= 0 ? allVariants[variantIndex] : allVariants[0];
 
     const cartId = `${product._id}-${variant.size}`;
     const displayName = `${product.name} - ${variant.size}`;
-    const basePrice = Number(variant.price);
+    const basePrice = variant.price;
+    const finalPrice = getVariantPrice(basePrice, product.discount);
 
-    const finalPrice = product.discount && product.discount > 0
-      ? Math.round(basePrice - (basePrice * product.discount / 100))
-      : basePrice;
-
-    const existingIdx = cart.findIndex((item: any) => item._id === cartId);
-
-    if (existingIdx > -1) {
-      const newCart = [...cart];
-      newCart[existingIdx].quantity += 1;
-      updateCart(newCart);
-    } else {
-      updateCart([...cart, { ...product, _id: cartId, name: displayName, price: finalPrice, quantity: 1, originalPrice: basePrice, productIdOriginal: product._id }]);
-    }
+    const cartItem: CartItem = {
+      ...product,
+      _id: cartId,
+      name: displayName,
+      price: finalPrice,
+      quantity: 1,
+      originalPrice: basePrice,
+      productIdOriginal: product._id,
+    };
+    updateCart(upsertCartItem(cart, cartItem));
 
     const shortName = product.name.length > 25 ? product.name.slice(0, 25) + '...' : product.name;
     const shortDisplayName = `${shortName} - ${variant.size}`;
@@ -136,15 +104,12 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
   };
 
   const updateQuantity = (cartId: string, delta: number) => {
-    const existingIdx = cart.findIndex(c => c._id === cartId);
-    if (existingIdx === -1) return;
-    const newCart = [...cart];
-    newCart[existingIdx].quantity += delta;
-    if (newCart[existingIdx].quantity <= 0) {
-      newCart.splice(existingIdx, 1);
+    const existingItem = cart.find((item) => item._id === cartId);
+    if (!existingItem) return;
+    if (existingItem.quantity + delta <= 0) {
       toast.info(`Removed from cart`);
     }
-    updateCart(newCart);
+    updateCart(updateCartItemQuantity(cart, cartId, delta));
   };
 
   return (
@@ -203,11 +168,10 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
               <div style={{ padding: 'clamp(0.6rem, 2vw, 1.25rem)', minWidth: 0 }}>
                 <div style={{ display: 'inline-block', background: 'rgba(255, 179, 0, 0.2)', color: 'var(--color-tertiary)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', fontSize: '0.7rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase' }}>{p.category}</div>
                 {(() => {
-                  const hasVariants = p.variants && p.variants.length > 0;
-                  const allVariants = hasVariants ? [{ size: `${p.quantity || 1} ${p.unit || 'kg'}`, price: p.price }, ...p.variants!] : [{ size: `${p.quantity || 1} ${p.unit || 'kg'}`, price: p.price }];
+                  const allVariants = getAllVariants(p);
                   const vi = selectedVariants[p._id] || 0;
-                  const currentBasePrice = Number(allVariants[vi].price);
-                  const currentFinalPrice = p.discount && p.discount > 0 ? Math.round(currentBasePrice - (currentBasePrice * p.discount / 100)) : currentBasePrice;
+                  const currentBasePrice = allVariants[vi].price;
+                  const currentFinalPrice = getVariantPrice(currentBasePrice, p.discount);
                   const activeCartId = `${p._id}-${allVariants[vi].size}`;
 
                   return (
@@ -232,7 +196,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                       </Link>
 
                       <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-                        {allVariants.map((v: any, idx: number) => {
+                        {allVariants.map((v, idx: number) => {
                           const isSelected = vi === idx;
                           return (
                             <button
@@ -263,28 +227,26 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                           <div style={{ flex: 1.15, display: 'flex' }}>
                             {(() => {
                               const cartItem = cart.find(c => c._id === activeCartId);
-                              if (p.inStock === false) {
-                                return (
-                                  <button disabled style={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '2px solid #e2e8f0', boxShadow: 'none', width: '100%', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', whiteSpace: 'normal', lineHeight: 1.2 }}>
-                                    Out of Stock
-                                  </button>
-                                );
-                              }
                               if (cartItem) {
                                 return (
-                                  <div style={{ display: 'flex', alignItems: 'stretch', background: '#f1f5f9', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '2px solid #e2e8f0', width: '100%', justifyContent: 'space-between' }}>
-                                    <button onClick={() => updateQuantity(activeCartId, -1)} style={{ padding: 'clamp(0.3rem, 1.5vw, 0.65rem) clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}>-</button>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                                      <span style={{ fontWeight: 800, color: '#0f172a', textAlign: 'center', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)' }}>{cartItem.quantity}</span>
-                                    </div>
-                                    <button onClick={() => updateQuantity(activeCartId, 1)} style={{ padding: 'clamp(0.3rem, 1.5vw, 0.65rem) clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-tertiary)', color: 'white', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}>+</button>
-                                  </div>
+                                  <QuantityStepper
+                                    quantity={cartItem.quantity}
+                                    onDecrement={() => updateQuantity(activeCartId, -1)}
+                                    onIncrement={() => updateQuantity(activeCartId, 1)}
+                                    containerStyle={{ display: 'flex', alignItems: 'stretch', background: '#f1f5f9', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '2px solid #e2e8f0', width: '100%', justifyContent: 'space-between' }}
+                                    decrementButtonStyle={{ padding: 'clamp(0.3rem, 1.5vw, 0.65rem) clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}
+                                    incrementButtonStyle={{ padding: 'clamp(0.3rem, 1.5vw, 0.65rem) clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-tertiary)', color: 'white', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}
+                                    quantityStyle={{ fontWeight: 800, color: '#0f172a', textAlign: 'center', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)' }}
+                                  />
                                 );
                               }
                               return (
-                                <button onClick={() => handleAddToCart(p, vi)} style={{ width: '100%', background: 'var(--color-tertiary)', color: 'white', border: '2px solid var(--color-tertiary)', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'normal', lineHeight: 1.2 }}>
-                                  Add to Cart
-                                </button>
+                                <AddToCartButton
+                                  inStock={p.inStock !== false}
+                                  onAdd={() => handleAddToCart(p, vi)}
+                                  style={{ width: '100%', background: 'var(--color-tertiary)', color: 'white', border: '2px solid var(--color-tertiary)', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'normal', lineHeight: 1.2 }}
+                                  outOfStockStyle={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '2px solid #e2e8f0', boxShadow: 'none', width: '100%', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', whiteSpace: 'normal', lineHeight: 1.2 }}
+                                />
                               );
                             })()}
                           </div>

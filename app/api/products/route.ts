@@ -1,9 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/db';
-import jwt from 'jsonwebtoken';
 import { v2 as cloudinary } from 'cloudinary';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'bheeshma_super_secret_key_2026';
+import { verifyAdminRequest } from '@/lib/server/auth';
 
 // Initialize Cloudinary
 cloudinary.config({
@@ -25,11 +23,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const token = req.cookies.get('admin_token')?.value;
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   try {
-    jwt.verify(token, JWT_SECRET);
+    verifyAdminRequest(req);
     const body = await req.json();
 
     // Handle Cloudinary Base64 Image Upload
@@ -59,11 +54,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const token = req.cookies.get('admin_token')?.value;
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   try {
-    jwt.verify(token, JWT_SECRET);
+    verifyAdminRequest(req);
     const { id, _id, ...updateData } = await req.json();
     const targetId = id || _id;
     if (!targetId) return NextResponse.json({ error: 'Missing product ID' }, { status: 400 });
@@ -94,17 +86,14 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const token = req.cookies.get('admin_token')?.value;
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   try {
-    jwt.verify(token, JWT_SECRET);
+    verifyAdminRequest(req);
     const id = req.nextUrl.searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'Missing product ID' }, { status: 400 });
 
     await prisma.product.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Deletion failed' }, { status: 400 });
   }
 }

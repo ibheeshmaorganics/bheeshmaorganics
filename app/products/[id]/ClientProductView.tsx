@@ -5,6 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'sonner';
+import { type CartItem } from '@/lib/cart';
+import { useCart } from '@/hooks/useCart';
+import { upsertCartItem, updateCartItemQuantity } from '@/lib/cart-operations';
+import { getAllVariants, getVariantPrice, type VariantOption } from '@/lib/product-variants';
+import { VariantSelector } from '../components/VariantSelector';
+import { QuantityStepper } from '../components/QuantityStepper';
+import { AddToCartButton } from '../components/AddToCartButton';
 
 const styles: Record<string, string> = {
   container: 'bo-container',
@@ -36,15 +43,29 @@ const styles: Record<string, string> = {
   descriptionBox: 'bo-descriptionBox'
 };
 
-export default function ClientProductView({ product }: { product: any }) {
+type ProductDetails = {
+  _id: string;
+  name: string;
+  price: number;
+  discount?: number;
+  images?: string[];
+  imageUrl?: string;
+  variants?: VariantOption[];
+  quantity?: number;
+  unit?: string;
+  inStock?: boolean;
+  description?: string;
+  [key: string]: unknown;
+};
+
+export default function ClientProductView({ product }: { product: ProductDetails }) {
   const router = useRouter();
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
-  const [cart, setCart] = useState<any[]>([]);
+  const { cart, syncCart } = useCart();
 
   useEffect(() => {
-    setCart(JSON.parse(localStorage.getItem('bheeshma_cart') || '[]'));
     router.prefetch('/checkout');
     router.prefetch('/products');
   }, [router]);
@@ -52,58 +73,41 @@ export default function ClientProductView({ product }: { product: any }) {
   if (!product) return null;
 
   const images = product.images && product.images.length > 0 ? product.images : (product.imageUrl ? [product.imageUrl] : []);
-  const hasVariants = product.variants && product.variants.length > 0;
-
-  const allVariants = hasVariants
-    ? [{ size: `${product.quantity} ${product.unit}`, price: product.price }, ...product.variants]
-    : [{ size: `${product.quantity} ${product.unit}`, price: product.price }];
-
-  const currentBasePrice = Number(allVariants[selectedVariantIdx].price);
-  const currentFinalPrice = product.discount && product.discount > 0
-    ? Math.round(currentBasePrice - (currentBasePrice * product.discount / 100))
-    : currentBasePrice;
+  const allVariants = getAllVariants(product);
+  const currentBasePrice = allVariants[selectedVariantIdx].price;
+  const currentFinalPrice = getVariantPrice(currentBasePrice, product.discount);
 
   const currentSizeName = allVariants[selectedVariantIdx].size;
   const activeCartId = `${product._id}-${currentSizeName}`;
   const displayName = `${product.name} - ${currentSizeName}`;
 
-  const updateCart = (newCart: any[]) => {
-    setCart(newCart);
-    localStorage.setItem('bheeshma_cart', JSON.stringify(newCart));
+  const updateCart = (newCart: CartItem[]) => {
+    syncCart(newCart);
   };
 
   const handleAddToCart = () => {
     if (product.inStock === false) return;
 
-    const existingIdx = cart.findIndex(c => c._id === activeCartId);
-    if (existingIdx > -1) {
-      const newCart = [...cart];
-      newCart[existingIdx].quantity += 1;
-      updateCart(newCart);
-    } else {
-      updateCart([...cart, {
-        ...product,
-        _id: activeCartId,
-        name: displayName,
-        price: currentFinalPrice,
-        quantity: 1,
-        originalPrice: currentBasePrice,
-        productIdOriginal: product._id
-      }]);
-    }
+    const cartItem: CartItem = {
+      ...product,
+      _id: activeCartId,
+      name: displayName,
+      price: currentFinalPrice,
+      quantity: 1,
+      originalPrice: currentBasePrice,
+      productIdOriginal: product._id,
+    };
+    updateCart(upsertCartItem(cart, cartItem));
     toast.success(`${displayName} added to cart!`);
   };
 
   const updateQuantity = (delta: number) => {
-    const existingIdx = cart.findIndex(c => c._id === activeCartId);
-    if (existingIdx === -1) return;
-    const newCart = [...cart];
-    newCart[existingIdx].quantity += delta;
-    if (newCart[existingIdx].quantity <= 0) {
-      newCart.splice(existingIdx, 1);
+    const existingItem = cart.find((item) => item._id === activeCartId);
+    if (!existingItem) return;
+    if (existingItem.quantity + delta <= 0) {
       toast.info(`Removed from cart`);
     }
-    updateCart(newCart);
+    updateCart(updateCartItemQuantity(cart, activeCartId, delta));
   };
 
   const cartItem = cart.find(c => c._id === activeCartId);
@@ -495,7 +499,7 @@ export default function ClientProductView({ product }: { product: any }) {
           
           {images.length > 1 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-              {images.map((_: any, i: number) => (
+              {images.map((_, i: number) => (
                 <span key={i} onClick={() => {
                     setSelectedImage(i);
                     const el = document.getElementById('mobile-image-carousel');
@@ -516,16 +520,13 @@ export default function ClientProductView({ product }: { product: any }) {
           <div className={styles.variantsSection}>
             <h3 className={styles.sectionTitle}>Select Size</h3>
             <div className={styles.variantsGrid}>
-              {allVariants.map((v: any, idx: number) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedVariantIdx(idx)}
-                  className={`${styles.variantPill} ${selectedVariantIdx === idx ? styles.variantPillActive : ''}`}
-                  style={allVariants.length === 1 ? { pointerEvents: 'none' } : {}}
-                >
-                  {v.size}
-                </button>
-              ))}
+              <VariantSelector
+                variants={allVariants}
+                selectedIndex={selectedVariantIdx}
+                onSelect={setSelectedVariantIdx}
+                className={styles.variantPill}
+                activeClassName={styles.variantPillActive}
+              />
             </div>
           </div>
 
@@ -544,25 +545,29 @@ export default function ClientProductView({ product }: { product: any }) {
             </div>
 
             <div className={styles.actionButtons} style={{ marginTop: '0', flexWrap: 'wrap' }}>
-              {product.inStock === false ? (
-                <button className={styles.addToCartBtn} disabled style={{ background: '#e2e8f0', color: '#64748b', cursor: 'not-allowed', boxShadow: 'none' }}>
-                  Out of Stock
-                </button>
-              ) : cartItem ? (
+              {cartItem && product.inStock !== false ? (
                 <>
-                  <div className={styles.qtyController}>
-                    <button onClick={() => updateQuantity(-1)} className={styles.qtyBtn}>-</button>
-                    <span className={styles.qtyNum}>{cartItem.quantity}</span>
-                    <button onClick={() => updateQuantity(1)} className={`${styles.qtyBtn} ${styles.plus}`}>+</button>
-                  </div>
+                  <QuantityStepper
+                    quantity={cartItem.quantity}
+                    onDecrement={() => updateQuantity(-1)}
+                    onIncrement={() => updateQuantity(1)}
+                    containerClassName={styles.qtyController}
+                    decrementButtonClassName={styles.qtyBtn}
+                    incrementButtonClassName={`${styles.qtyBtn} ${styles.plus}`}
+                    quantityClassName={styles.qtyNum}
+                  />
                   <Link href="/checkout" prefetch={true} className={styles.addToCartBtn} style={{ textDecoration: 'none', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     Proceed to Checkout →
                   </Link>
                 </>
               ) : (
-                <button onClick={handleAddToCart} className={styles.addToCartBtn}>
-                  Add to Cart
-                </button>
+                <AddToCartButton
+                  inStock={product.inStock !== false}
+                  onAdd={handleAddToCart}
+                  className={styles.addToCartBtn}
+                  outOfStockClassName={styles.addToCartBtn}
+                  outOfStockStyle={{ background: '#e2e8f0', color: '#64748b', cursor: 'not-allowed', boxShadow: 'none' }}
+                />
               )}
             </div>
           </div>

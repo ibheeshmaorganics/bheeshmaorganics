@@ -5,11 +5,49 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import styles from './page.module.css';
+import { readCart, writeCart, clearCart, type CartItem } from '@/lib/cart';
+
+type RazorpaySuccessResponse = {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+};
+
+type RazorpayFailureResponse = {
+  error: {
+    description?: string;
+  };
+};
+
+type RazorpayOptions = {
+  key?: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpaySuccessResponse) => Promise<void>;
+  prefill: {
+    name: string;
+    email: string;
+    contact: string;
+  };
+  theme: { color: string };
+};
+
+declare global {
+  interface Window {
+    Razorpay: new (options: RazorpayOptions) => {
+      on: (event: 'payment.failed', handler: (response: RazorpayFailureResponse) => void) => void;
+      open: () => void;
+    };
+  }
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showPopup, setShowPopup] = useState<{status: 'success'|'failed', message: string} | null>(null);
   const [formData, setFormData] = useState({
     customerName: '',
@@ -23,7 +61,7 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
-    const items = JSON.parse(localStorage.getItem('bheeshma_cart') || '[]');
+    const items = readCart();
     setCartItems(items);
     router.prefetch('/products');
     router.prefetch('/track');
@@ -39,14 +77,14 @@ export default function CheckoutPage() {
         toast.info("Item removed from cart");
       }
       setCartItems(newCart);
-      localStorage.setItem('bheeshma_cart', JSON.stringify(newCart));
+      writeCart(newCart);
     }
   };
 
   const removeItem = (productId: string) => {
     const newCart = cartItems.filter(item => item._id !== productId);
     setCartItems(newCart);
-    localStorage.setItem('bheeshma_cart', JSON.stringify(newCart));
+    writeCart(newCart);
     toast.info("Item removed from cart");
     if (newCart.length === 0) {
       // Do nothing, UI will gracefully render the empty cart state natively
@@ -97,7 +135,6 @@ export default function CheckoutPage() {
             name: item.name,
             image: item.imageUrl || (item.images && item.images[0]) || ''
           })),
-          totalAmount: finalTotalAmount,
           paymentMethod: formData.paymentMethod
         })
       });
@@ -118,7 +155,7 @@ export default function CheckoutPage() {
             name: 'Bheeshma Organics',
             description: 'Order Payment',
             order_id: data.razorpayOrderId,
-            handler: async function (response: any) {
+            handler: async function (response: RazorpaySuccessResponse) {
               setLoading(true); // Prevent UI interactions
               try {
                 // Send the securely matched Razorpay tokens back to the server
@@ -133,17 +170,17 @@ export default function CheckoutPage() {
                   })
                 });
                 
-                const verifyData = await verifyRes.json();
+                await verifyRes.json();
                 
                 if (verifyRes.ok) {
-                  localStorage.removeItem('bheeshma_cart');
+                  clearCart();
                   setShowPopup({status: 'success', message: 'Order Placed Successfully! Thank you.'});
                   setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
                 } else {
                   setShowPopup({status: 'failed', message: 'Payment Verification Failed.'});
                   setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
                 }
-              } catch (e) {
+              } catch {
                 toast.error('Error verifying payment on server.');
               } finally {
                 setLoading(false);
@@ -157,21 +194,14 @@ export default function CheckoutPage() {
             theme: { color: '#4CAF50' },
           };
 
-          const rzp = new (window as any).Razorpay(options);
-          rzp.on('payment.failed', async function (response: any) {
+          const rzp = new window.Razorpay(options);
+          rzp.on('payment.failed', async function (response: RazorpayFailureResponse) {
             setShowPopup({status: 'failed', message: 'Payment Failed: ' + response.error.description});
-            try {
-               await fetch('/api/orders/failed', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ orderId: data.orderId })
-               });
-            } catch (e) {}
             setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
           });
           rzp.open();
         } else {
-          localStorage.removeItem('bheeshma_cart');
+          clearCart();
           setShowPopup({status: 'success', message: 'Order Placed Successfully! Thank you.'});
           setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
         }
@@ -179,7 +209,7 @@ export default function CheckoutPage() {
         setShowPopup({status: 'failed', message: 'Order Failed: ' + data.error});
         setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
       }
-    } catch (err) {
+    } catch {
       setShowPopup({status: 'failed', message: 'Error connecting to secure backend servers.'});
       setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
     } finally {
@@ -202,7 +232,7 @@ export default function CheckoutPage() {
         >
           <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🛒</div>
           <h2 style={{ fontSize: '2.2rem', color: '#1e293b', fontWeight: '900', marginBottom: '0.8rem', letterSpacing: '-0.5px' }}>Empty Cart!</h2>
-          <p style={{ color: '#64748b', fontSize: '1.15rem', marginBottom: '2.5rem', lineHeight: '1.6' }}>Looks like you haven't added anything yet. Discover our premium herbal wellness collection today.</p>
+          <p style={{ color: '#64748b', fontSize: '1.15rem', marginBottom: '2.5rem', lineHeight: '1.6' }}>Looks like you haven&apos;t added anything yet. Discover our premium herbal wellness collection today.</p>
           <button
             onClick={() => router.push('/products')}
             style={{ display: 'block', width: '100%', padding: '18px', background: 'var(--color-tertiary)', color: 'white', borderRadius: '16px', fontWeight: '800', border: 'none', cursor: 'pointer', fontSize: '1.15rem', transition: 'all 0.3s', boxShadow: '0 10px 25px rgba(255, 152, 0, 0.3)', boxSizing: 'border-box' }}

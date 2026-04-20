@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/db';
+import Razorpay from 'razorpay';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +28,6 @@ export async function POST(req: NextRequest) {
 
     // Razorpay explicitly triggers 'order.paid' when the payment is fully captured natively
     if (event.event === 'order.paid') {
-      const razorpayOrderId = event.payload.order.entity.id;
       const paymentId = event.payload.payment?.entity?.id;
       const dbOrderId = event.payload.order.entity.receipt;
 
@@ -35,14 +35,19 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'No associated Receipt ID found.' }, { status: 400 });
       }
 
-      await prisma.order.update({
+      const updated = await prisma.order.updateMany({
         where: { id: dbOrderId },
-        data: { 
-          status: 'Pending', 
+        data: {
+          status: 'Pending',
           paymentStatus: 'paid',
-          ...(paymentId && { paymentId })
-        }
+          ...(paymentId && { paymentId }),
+        },
       });
+
+      if (updated.count === 0) {
+        console.warn(`[WEBHOOK] Unknown receipt id received for order.paid: ${dbOrderId}`);
+        return NextResponse.json({ status: 'ok' }, { status: 200 });
+      }
 
       console.log(`[WEBHOOK] Order ${dbOrderId} successfully marked as Paid via Razorpay Webhook`);
     }
@@ -52,7 +57,6 @@ export async function POST(req: NextRequest) {
       const razorpayOrderId = event.payload.payment.entity.order_id;
       
       try {
-        const Razorpay = require('razorpay');
         const razorpay = new Razorpay({
           key_id: process.env.RAZORPAY_KEY_ID,
           key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -68,8 +72,9 @@ export async function POST(req: NextRequest) {
           });
           console.log(`[WEBHOOK] Order ${dbOrderId} marked as Payment Failed`);
         }
-      } catch (err: any) {
-         console.error(`[WEBHOOK] Failed to update payment failure for order log:`, err.message);
+      } catch (err: unknown) {
+         const webhookErr = err instanceof Error ? err.message : String(err);
+         console.error('[WEBHOOK] Failed to update payment failure for order log:', webhookErr);
       }
     }
 
@@ -101,8 +106,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ status: 'ok' }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown webhook error';
     console.error('Webhook processing failed:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

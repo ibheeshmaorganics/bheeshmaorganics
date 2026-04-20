@@ -1,8 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/db';
+import { verifyAdminRequest } from '@/lib/server/auth';
 
 export async function POST(req: NextRequest) {
   try {
+    verifyAdminRequest(req);
     const { orderId } = await req.json();
 
     if (!orderId) {
@@ -15,8 +17,12 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, message: 'Marked as payment failed' });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Failed to mark order as failed';
     console.error('Failed to mark order as failed:', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    if (errorMessage === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

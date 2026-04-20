@@ -1,42 +1,57 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
+import { signAdminToken } from '@/lib/server/auth';
+import { checkRateLimit } from '@/lib/server/rate-limit';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'bheeshma_super_secret_key_2026';
+function getRequestIp(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return 'unknown';
+}
 
 export async function POST(req: NextRequest) {
   try {
-    // Automatically seed the first admin credential into DB if it doesn't exist
-    const adminCount = await prisma.admin.count();
-    if (adminCount === 0) {
-      const defaultUsername = process.env.ADMIN_USERNAME || 'admin';
-      const defaultPassword = process.env.ADMIN_PASSWORD || 'admin123';
-      const salt = await bcrypt.genSalt(10);
-      const passwordHash = await bcrypt.hash(defaultPassword, salt);
-      await prisma.admin.create({
-        data: {
-          username: defaultUsername,
-          passwordHash,
-        }
-      });
-      console.log('Seeded default admin into DB');
+    const { username, password } = (await req.json()) as { username?: string; password?: string };
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Username and password are required.' }, { status: 400 });
     }
 
-    const { username, password } = await req.json();
+    const ip = getRequestIp(req);
+    const ipRate = checkRateLimit(`admin-login-ip:${ip}`, {
+      windowMs: 15 * 60 * 1000,
+      max: 30,
+      blockDurationMs: 15 * 60 * 1000,
+    });
+    if (!ipRate.allowed) {
+      return NextResponse.json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
+    }
+
+    const userRate = checkRateLimit(`admin-login-user:${username.toLowerCase()}`, {
+      windowMs: 15 * 60 * 1000,
+      max: 8,
+      blockDurationMs: 15 * 60 * 1000,
+    });
+    if (!userRate.allowed) {
+      return NextResponse.json({ error: 'Too many login attempts. Try again later.' }, { status: 429 });
+    }
 
     const admin = await prisma.admin.findUnique({ where: { username } });
     if (!admin) {
+      console.warn('Admin login failed: unknown username', { username, ip });
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
     const isMatch = await bcrypt.compare(password, admin.passwordHash);
     if (!isMatch) {
+      console.warn('Admin login failed: invalid password', { username, ip });
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = jwt.sign({ adminId: admin.id }, JWT_SECRET, { expiresIn: '1d' });
+    const token = signAdminToken({ adminId: admin.id });
 
     const response = NextResponse.json({ success: true });
     response.headers.set(
@@ -52,8 +67,8 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: 'Server error: ' + errorMsg }, { status: 500 });
+    console.error('Admin login failed:', error);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
 

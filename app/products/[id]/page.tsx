@@ -1,7 +1,25 @@
 import prisma from '@/lib/db';
 import ClientProductView from './ClientProductView';
+import { type VariantOption } from '@/lib/product-variants';
+import { Prisma } from '@prisma/client';
 
 export const revalidate = 5;
+
+function normalizeVariants(variants: Prisma.JsonValue | null): VariantOption[] {
+  if (!Array.isArray(variants)) {
+    return [];
+  }
+
+  return variants
+    .map((variant) => {
+      if (!variant || typeof variant !== 'object') return null;
+      const maybeSize = 'size' in variant ? variant.size : null;
+      const maybePrice = 'price' in variant ? variant.price : null;
+      if (typeof maybeSize !== 'string' || typeof maybePrice !== 'number') return null;
+      return { size: maybeSize, price: maybePrice };
+    })
+    .filter((variant): variant is VariantOption => variant !== null);
+}
 
 export default async function ProductViewWrapper(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -26,6 +44,7 @@ export default async function ProductViewWrapper(props: { params: Promise<{ id: 
     ...p,
     _id: p.id,
     createdAt: p.createdAt.toISOString(),
+    variants: normalizeVariants(p.variants),
   };
 
   return <ClientProductView product={resolvedProduct} />;

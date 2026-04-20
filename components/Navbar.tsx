@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './Navbar.module.css';
+import { readCart, getCartCount } from '@/lib/cart';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -17,9 +18,7 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll);
 
     const updateCount = () => {
-      const cart = JSON.parse(localStorage.getItem('bheeshma_cart') || '[]');
-      const count = cart.reduce((acc: number, item: any) => acc + item.quantity, 0);
-      setCartCount(count);
+      setCartCount(getCartCount(readCart()));
     };
     updateCount();
     const interval = setInterval(updateCount, 1000); // 1-second poller for instantaneous updates globally

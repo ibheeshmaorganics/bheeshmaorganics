@@ -1,7 +1,23 @@
 import prisma from '@/lib/db';
 import ClientProductGrid from './ClientProductGrid';
+import { Prisma } from '@prisma/client';
+import { type VariantOption } from '@/lib/product-variants';
 
 export const revalidate = 5;
+
+function normalizeVariants(variants: Prisma.JsonValue | null): VariantOption[] {
+  if (!Array.isArray(variants)) return [];
+
+  return variants
+    .map((variant) => {
+      if (!variant || typeof variant !== 'object') return null;
+      const maybeSize = 'size' in variant ? variant.size : null;
+      const maybePrice = 'price' in variant ? variant.price : null;
+      if (typeof maybeSize !== 'string' || typeof maybePrice !== 'number') return null;
+      return { size: maybeSize, price: maybePrice };
+    })
+    .filter((variant): variant is VariantOption => variant !== null);
+}
 
 export default async function ProductsPage() {
   // Pre-fetching data securely straight from the Server (Server-Side Rendering)
@@ -21,7 +37,7 @@ export default async function ProductsPage() {
     images: p.images || [],
     inStock: p.inStock,
     createdAt: p.createdAt.toISOString(),
-    variants: Array.isArray(p.variants) ? p.variants : []
+    variants: normalizeVariants(p.variants)
   }));
 
   return <ClientProductGrid products={products} />;

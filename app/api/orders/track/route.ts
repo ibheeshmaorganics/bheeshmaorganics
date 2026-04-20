@@ -1,9 +1,36 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/db';
+import { createProductMap, normalizeOrderProducts } from '@/lib/server/order-products';
+import { checkRateLimit } from '@/lib/server/rate-limit';
 
-let cachedProductMap: Record<string, any> | null = null;
+let cachedProductMap: ReturnType<typeof createProductMap> | null = null;
 let lastCacheRefresh = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getRequestIp(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return 'unknown';
+}
+
+function maskPhone(value: string): string {
+  if (value.length <= 4) return '****';
+  return `${'*'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
+}
+
+function maskEmail(value: string): string {
+  const [local, domain] = value.split('@');
+  if (!local || !domain) return '***';
+  const visible = local.slice(0, 2);
+  return `${visible}${'*'.repeat(Math.max(0, local.length - 2))}@${domain}`;
+}
+
+function maskAddress(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value;
+  return { masked: true };
+}
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
@@ -14,8 +41,19 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const ip = getRequestIp(req);
+    const rateKey = `order-track:${ip}:${identifier.toLowerCase()}`;
+    const rate = checkRateLimit(rateKey, {
+      windowMs: 10 * 60 * 1000,
+      max: 20,
+      blockDurationMs: 10 * 60 * 1000,
+    });
+    if (!rate.allowed) {
+      return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+    }
+
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
-    const orConditions: any[] = [
+    const orConditions: Array<{ phone?: string; email?: string; id?: string }> = [
       { phone: identifier },
       { email: identifier },
     ];
@@ -26,14 +64,11 @@ export async function GET(req: NextRequest) {
 
     if (!cachedProductMap || Date.now() - lastCacheRefresh > CACHE_TTL_MS) {
       const products = await prisma.product.findMany({ select: { id: true, name: true } });
-      cachedProductMap = products.reduce((acc, p) => {
-        acc[p.id] = { ...p, _id: p.id };
-        return acc;
-      }, {} as Record<string, any>);
+      cachedProductMap = createProductMap(products);
       lastCacheRefresh = Date.now();
     }
 
-    let orders = await prisma.order.findMany({
+    const orders = await prisma.order.findMany({
       where: { 
         OR: orConditions,
         paymentStatus: { not: 'draft_intent' }
@@ -42,25 +77,19 @@ export async function GET(req: NextRequest) {
     });
 
     const populatedOrders = orders.map((order) => {
-      const orderProducts = Array.isArray(order.products) ? order.products : [];
-      const populatedProducts = orderProducts.map((op: any) => {
-        const baseId = op.productId ? String(op.productId).slice(0, 36) : '';
-        const variantSuffix = op.productId && String(op.productId).length > 36 ? ` (${String(op.productId).slice(37)})` : '';
-        const mappedProduct = cachedProductMap![baseId];
-        return {
-          ...op,
-          productId: mappedProduct ? { ...mappedProduct, name: mappedProduct.name + variantSuffix } : { _id: op.productId, name: op.name || 'Unknown Product' }
-        };
-      });
       return {
         ...order,
         _id: order.id,
-        products: populatedProducts
+        phone: maskPhone(order.phone),
+        email: maskEmail(order.email),
+        address: maskAddress(order.address),
+        paymentId: order.paymentId ? `${order.paymentId.slice(0, 6)}...` : null,
+        products: normalizeOrderProducts(order.products, cachedProductMap!),
       };
     });
 
     return NextResponse.json({ orders: populatedOrders });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ orders: [] });
   }
 }

@@ -1,15 +1,11 @@
 import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/db';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'bheeshma_super_secret_key_2026';
+import { verifyAdminRequest } from '@/lib/server/auth';
+import Razorpay from 'razorpay';
 
 export async function POST(req: NextRequest) {
-  const token = req.cookies.get('admin_token')?.value;
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   try {
-    jwt.verify(token, JWT_SECRET);
+    verifyAdminRequest(req);
     const body = await req.json();
     const { orderId, refundType } = body;
 
@@ -39,7 +35,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This order has already been refunded.' }, { status: 400 });
     }
 
-    const Razorpay = require('razorpay');
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
       key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -69,13 +64,14 @@ export async function POST(req: NextRequest) {
       data: { 
         paymentStatus: 'refund initiated',
         refundId: currentRefundId
-      } as any 
+      },
     });
 
     return NextResponse.json({ success: true, message: `${message} (Ref: ${currentRefundId})`, refundId: currentRefundId });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Error processing refund dynamically';
     console.error('Refund API Error:', error);
-    return NextResponse.json({ error: error.message || 'Error processing refund dynamically' }, { status: 500 });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
