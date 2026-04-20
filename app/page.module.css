@@ -660,22 +660,25 @@
 
 /* ─── Platform Section ─── */
 .platformSection {
-  padding: 5rem 0;
+  padding: 4rem 0 4.5rem 0;
   background: linear-gradient(135deg, #fdfaf5 0%, #fff8ec 100%);
   border-top: 1px solid rgba(0, 0, 0, 0.05);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.platformInner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4rem;
-  flex-wrap: wrap;
+.platformContent {
+  max-width: 920px;
+  margin: 0 auto;
+  text-align: center;
 }
 
-.platformTextSide {
-  flex: 1 1 320px;
+.platformLogoRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
 }
 
 .platformEyebrow {
@@ -700,39 +703,73 @@
   font-size: 1rem;
   color: var(--color-text-light);
   line-height: 1.7;
-  max-width: 420px;
+  max-width: 700px;
+  margin: 0 auto;
 }
 
-/* ── Badge side (desktop) ── */
-.platformBadgeSide {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  flex: 0 0 auto;
-}
-
-/* Each badge link */
-.badgeLink {
-  display: block;
+.platformLogoLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 76px;
+  min-width: 230px;
+  padding: 0.45rem 0.8rem;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.06);
+  border-radius: 14px;
   text-decoration: none;
-  border-radius: 14px;
-  overflow: hidden;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.25s ease;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.badgeLink:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
+.platformLogoLink:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.14);
 }
 
-/* Badge image */
-.badgeImg {
-  display: block;
-  width: 240px;
-  height: auto;
-  border-radius: 14px;
+.platformLogo {
+  width: 100%;
+  max-width: 220px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.platformActionRow {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.85rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.platformActionAmazon,
+.platformActionFlipkart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.platformActionAmazon {
+  background: #ff9900;
+  color: #111827;
+  box-shadow: 0 6px 18px rgba(255, 153, 0, 0.35);
+}
+
+.platformActionFlipkart {
+  background: #1c62d0;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(28, 98, 208, 0.35);
+}
+
+.platformActionAmazon:hover,
+.platformActionFlipkart:hover {
+  transform: translateY(-2px);
 }
 
 @media (max-width: 768px) {
@@ -740,33 +777,20 @@
     padding: 2.5rem 0;
   }
 
-  .platformInner {
-    flex-direction: column;
-    gap: 1.25rem;
-    text-align: center;
-  }
-
-  .platformTextSide {
-    flex: none;
-    width: 100%;
-  }
-
   .platformSub {
     margin: 0 auto;
     font-size: 0.9rem;
   }
 
-  /* Badges move ABOVE the text on mobile */
-  .platformBadgeSide {
-    order: -1;
+  .platformLogoLink {
+    min-width: 0;
     width: 100%;
-    align-items: center;
-    gap: 0.75rem;
+    max-width: 280px;
   }
 
-  .badgeImg {
-    width: 100%;
-    max-width: 220px;
+  .platformLogo {
+    max-width: 180px;
+    height: 48px;
   }
 
   .platformHeroRow {

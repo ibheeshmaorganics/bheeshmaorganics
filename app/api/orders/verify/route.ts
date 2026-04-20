@@ -46,13 +46,13 @@ export async function POST(req: NextRequest) {
       }
 
       const currentMethod = order?.paymentMethod || 'Razorpay';
-      const isCod = currentMethod === 'Cash';
+      const isPartial = currentMethod === 'Partial';
 
       await prisma.order.update({
         where: { id: orderId },
         data: { 
           status: 'Pending', 
-          paymentStatus: isCod ? 'cod (Advance Paid)' : 'paid',
+          paymentStatus: isPartial ? 'partial (Advance Paid)' : 'paid',
           paymentId: razorpay_payment_id
         } // Preserve in Pending/NEW tab natively
       });

@@ -47,6 +47,7 @@ declare global {
 export default function CheckoutPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showPopup, setShowPopup] = useState<{status: 'success'|'failed', message: string} | null>(null);
   const [formData, setFormData] = useState({
@@ -57,7 +58,7 @@ export default function CheckoutPage() {
     city: '',
     state: '',
     pinCode: '',
-    paymentMethod: 'Cash',
+    orderType: '',
   });
 
   useEffect(() => {
@@ -92,15 +93,32 @@ export default function CheckoutPage() {
   };
 
   const baseTotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const isOnline = formData.paymentMethod === 'Razorpay';
-  const discountAmount = isOnline ? Math.round(baseTotal * 0.10) : 0;
-  const finalTotalAmount = baseTotal - discountAmount;
+  const isPayFull = formData.orderType === 'PAY_FULL';
+  const isPartial = formData.orderType === 'PARTIAL';
+  const isCod = formData.orderType === 'COD';
+  const hasSelectedOrderType = isPayFull || isPartial || isCod;
+  const fullPaymentDiscountAmount = Math.round(baseTotal * 0.10);
+  const discountAmount = isPayFull ? fullPaymentDiscountAmount : 0;
+  const codConvenienceFee = isCod ? 50 : 0;
+  const payableTotal = Math.max(0, baseTotal - discountAmount + codConvenienceFee);
+  const payNowAmount = isPayFull ? payableTotal : isPartial ? Math.min(99, payableTotal) : 0;
+  const payLaterAmount = Math.max(0, payableTotal - payNowAmount);
+  const isPhoneValid = /^\d{10}$/.test(formData.phone);
+
+  const handlePhoneChange = (value: string) => {
+    const onlyDigits = value.replace(/\D/g, '').slice(0, 10);
+    setFormData({ ...formData, phone: onlyDigits });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0) {
       toast.error('Your cart is empty! Please add products before checking out.');
       return router.push('/products');
+    }
+    if (!isPhoneValid) {
+      toast.error('Please enter a valid 10-digit mobile number.');
+      return;
     }
     setLoading(true);
 
@@ -135,7 +153,8 @@ export default function CheckoutPage() {
             name: item.name,
             image: item.imageUrl || (item.images && item.images[0]) || ''
           })),
-          paymentMethod: formData.paymentMethod
+          paymentMethod: formData.orderType === 'PAY_FULL' ? 'Razorpay' : formData.orderType === 'PARTIAL' ? 'Partial' : 'Cash',
+          orderType: formData.orderType
         })
       });
 
@@ -213,7 +232,7 @@ export default function CheckoutPage() {
       setShowPopup({status: 'failed', message: 'Error connecting to secure backend servers.'});
       setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
     } finally {
-      if (formData.paymentMethod === 'Cash') {
+      if (formData.orderType === 'COD') {
          setLoading(false);
       } else {
          setTimeout(() => setLoading(false), 2000); 
@@ -249,14 +268,12 @@ export default function CheckoutPage() {
   return (
     <div className={styles.checkoutContainer}>
       <div className={styles.blobOrange}></div>
-      <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 10 }}>
-        <div style={{ marginBottom: '1.5rem', alignSelf: 'flex-start' }}>
+      <div className={styles.checkoutShell}>
+        <div className={styles.topActions}>
           <Link
             href="/products"
             prefetch={true}
-            style={{ textDecoration: 'none', background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(255,255,255,0.5)', padding: '10px 24px', borderRadius: '30px', color: '#334155', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s', fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', backdropFilter: 'blur(10px)' }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-3px)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            className={styles.backToStoreBtn}
           >
             <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>←</span> Back to Store
           </Link>
@@ -269,19 +286,19 @@ export default function CheckoutPage() {
         >
           {/* Left Side: Order Summary */}
           <div className={styles.orderSummary}>
-            <h2 className={styles.summaryTitle} style={{ marginBottom: '20px' }}>Your Cart</h2>
+            <h2 className={styles.summaryTitle}>Cart</h2>
 
-            <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '10px' }}>
+            <div className={styles.cartList}>
               {cartItems.length === 0 ? (
                 <p style={{ color: '#64748b', fontSize: '0.95rem' }}>Your cart is empty.</p>
               ) : (
                 cartItems.map((item, i) => (
-                  <div key={i} className={styles.cartItem} style={{ position: 'relative' }}>
-                    <img src={item.imageUrl || (item.images && item.images[0]) || '🌿'} alt={item.name} className={styles.itemImage} style={{ alignSelf: 'flex-start', marginTop: '5px' }} />
-                    <div className={styles.itemDetails} style={{ width: '100%' }}>
+                  <div key={i} className={styles.cartItem}>
+                    <img src={item.imageUrl || (item.images && item.images[0]) || '🌿'} alt={item.name} className={styles.itemImage} />
+                    <div className={styles.itemDetails}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <h4 style={{ paddingRight: '15px' }}>{item.name}</h4>
-                        <button type="button" onClick={() => removeItem(item._id)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600 }}>Remove</button>
+                          <button type="button" onClick={() => removeItem(item._id)} className={styles.removeBtn}>Remove</button>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
@@ -305,7 +322,11 @@ export default function CheckoutPage() {
               </span>
               <span>₹{baseTotal}</span>
             </div>
-            {isOnline && (
+            <div className={styles.totalRow} style={{ marginTop: '10px', fontSize: '1rem', color: '#16a34a' }}>
+              <span>Shipping</span>
+              <span>Free</span>
+            </div>
+            {isPayFull && (
               <div className={styles.totalRow} style={{ marginTop: '10px', fontSize: '1rem', color: '#16a34a' }}>
                 <span style={{ display: 'flex', flexDirection: 'column' }}>
                   Online Payment Discount (10%)
@@ -313,54 +334,139 @@ export default function CheckoutPage() {
                 <span>- ₹{discountAmount}</span>
               </div>
             )}
+            {isCod && (
+              <div className={styles.totalRow} style={{ marginTop: '10px', fontSize: '1rem', color: '#b45309' }}>
+                <span>COD Convenience Fee</span>
+                <span>+ ₹50</span>
+              </div>
+            )}
             <div className={styles.totalRow} style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '15px', color: 'var(--color-tertiary)', fontSize: '1.4rem' }}>
               <span style={{ display: 'flex', flexDirection: 'column' }}>
-                Total to Pay Now
-                {!isOnline && <span style={{ fontSize: '0.85rem', color: '#ef4444', marginTop: '4px', maxWidth: '280px', lineHeight: 1.4 }}>₹99 advance payment securely required for COD orders to confirm shipping. Balance ₹{finalTotalAmount > 99 ? finalTotalAmount - 99 : 0} on delivery.</span>}
+                {currentStep === 1 ? 'Estimated Total' : 'Order Summary'}
+                {currentStep === 2 && (
+                  <span style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px', maxWidth: '280px', lineHeight: 1.4 }}>
+                    Pay now: ₹{payNowAmount} {payLaterAmount > 0 ? `| Pay later: ₹${payLaterAmount}` : ''}
+                  </span>
+                )}
               </span>
-              <span>{isOnline ? `₹${finalTotalAmount}` : '₹99'}</span>
+              <span>₹{payableTotal}</span>
             </div>
           </div>
 
           {/* Right Side: Form */}
           <div className={styles.formSection}>
-            <h2 className={styles.sectionTitle}>Checkout</h2>
-            <p className={styles.sectionSub}>Complete your highly secure order details below.</p>
+            <div className={styles.progressWrap}>
+              <div className={styles.progressHeader}>
+                <span>Step {currentStep} of 2</span>
+                <span>{currentStep === 1 ? 'Order details' : 'Payment method'}</span>
+              </div>
+              <div className={styles.progressTrack}>
+                <div
+                  className={styles.progressFill}
+                  style={{ width: currentStep === 1 ? '50%' : '100%' }}
+                />
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit}>
-              <div className={styles.inputGrid}>
-                <h3 className={styles.sectionLabel}>Contact Details</h3>
-                <input type="text" placeholder="Full Name" className={`${styles.inputField} ${styles.fullWidth}`} required onChange={e => setFormData({ ...formData, customerName: e.target.value })} />
-                <input type="tel" placeholder="Phone Number" className={styles.inputField} required onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                <input type="email" placeholder="Email Address" className={styles.inputField} required onChange={e => setFormData({ ...formData, email: e.target.value })} />
-
-                <h3 className={styles.sectionLabel}>Shipping Address</h3>
-                <input type="text" placeholder="Door No. / Village / Area" className={`${styles.inputField} ${styles.fullWidth}`} required onChange={e => setFormData({ ...formData, street: e.target.value })} />
-                <input type="text" placeholder="City" className={styles.inputField} required onChange={e => setFormData({ ...formData, city: e.target.value })} />
-                <input type="text" placeholder="State" className={styles.inputField} required onChange={e => setFormData({ ...formData, state: e.target.value })} />
-                <input type="text" placeholder="PIN Code" className={styles.inputField} required onChange={e => setFormData({ ...formData, pinCode: e.target.value })} />
-                <h3 className={styles.sectionLabel}>Payment Method</h3>
-                <div style={{ display: 'flex', gap: '15px', gridColumn: '1 / -1', flexWrap: 'wrap' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: formData.paymentMethod === 'Cash' ? '#dcfce7' : '#f8fafc', padding: '12px 20px', borderRadius: '12px', border: `2px solid ${formData.paymentMethod === 'Cash' ? '#22c55e' : '#e2e8f0'}`, flex: 1 }}>
-                    <input type="radio" name="paymentMethod" value="Cash" checked={formData.paymentMethod === 'Cash'} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} />
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontWeight: 'bold' }}>Cash on Delivery</span>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>₹99 advance payment required</span>
+              {currentStep === 1 ? (
+                <>
+                  <div className={styles.mobileProductDetails}>
+                    <div className={styles.mobileProductHeader}>
+                      <h3 className={styles.mobileProductTitle}>Product details</h3>
+                      <span className={styles.mobileProductCount}>{cartItems.length} item{cartItems.length > 1 ? 's' : ''}</span>
                     </div>
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: formData.paymentMethod === 'Razorpay' ? '#dcfce7' : '#f8fafc', padding: '12px 20px', borderRadius: '12px', border: `2px solid ${formData.paymentMethod === 'Razorpay' ? '#22c55e' : '#e2e8f0'}`, flex: 1 }}>
-                    <input type="radio" name="paymentMethod" value="Razorpay" checked={formData.paymentMethod === 'Razorpay'} onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })} />
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontWeight: 'bold' }}>Pay Online Securely</span>
-                      <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 'bold' }}>Get 10% OFF</span>
+                    <div className={styles.mobileProductList}>
+                      {cartItems.map((item, i) => (
+                        <div key={`mobile-item-${i}`} className={styles.mobileProductItem}>
+                          <span className={styles.mobileProductName}>{item.name} x {item.quantity}</span>
+                          <strong>₹{item.price * item.quantity}</strong>
+                        </div>
+                      ))}
                     </div>
-                  </label>
-                </div>
-              </div>
+                    <div className={styles.mobileProductTotal}>
+                      <span>Subtotal</span>
+                      <strong>₹{baseTotal}</strong>
+                    </div>
+                  </div>
 
-              <button type="submit" className={styles.payBtn} disabled={loading}>
-                {loading ? 'Processing Securely...' : <>Place Order <span style={{ fontSize: '1.2rem' }}>→</span></>}
-              </button>
+                  <div className={styles.inputGrid}>
+                    <h3 className={styles.sectionLabel}>Customer details</h3>
+                    <input type="text" placeholder="Full Name" value={formData.customerName} className={`${styles.inputField} ${styles.fullWidth}`} required onChange={e => setFormData({ ...formData, customerName: e.target.value })} />
+                    <input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={formData.phone}
+                      className={styles.inputField}
+                      required
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      maxLength={10}
+                      title="Enter 10-digit mobile number"
+                      onChange={e => handlePhoneChange(e.target.value)}
+                    />
+                    <input type="email" placeholder="Email Address" value={formData.email} className={styles.inputField} required onChange={e => setFormData({ ...formData, email: e.target.value })} />
+
+                    <h3 className={styles.sectionLabel}>Address details</h3>
+                    <input type="text" placeholder="Door No. / Village / Area" value={formData.street} className={`${styles.inputField} ${styles.fullWidth}`} required onChange={e => setFormData({ ...formData, street: e.target.value })} />
+                    <input type="text" placeholder="City" value={formData.city} className={styles.inputField} required onChange={e => setFormData({ ...formData, city: e.target.value })} />
+                    <input type="text" placeholder="State" value={formData.state} className={styles.inputField} required onChange={e => setFormData({ ...formData, state: e.target.value })} />
+                    <input type="text" placeholder="PIN Code" value={formData.pinCode} className={styles.inputField} required onChange={e => setFormData({ ...formData, pinCode: e.target.value })} />
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.payBtn}
+                    onClick={() => setCurrentStep(2)}
+                    disabled={!formData.customerName || !isPhoneValid || !formData.email || !formData.street || !formData.city || !formData.state || !formData.pinCode}
+                  >
+                    Continue to payment method <span style={{ fontSize: '1.2rem' }}>→</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className={styles.sectionLabel}>Order type</h3>
+                  <div className={styles.orderTypeGrid}>
+                    <label className={`${styles.orderTypeCard} ${isPayFull ? styles.orderTypeCardActive : ''}`}>
+                      <input type="radio" name="orderType" value="PAY_FULL" checked={isPayFull} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
+                      <div>
+                        <strong>Pay full payment</strong>
+                        <span>10% discount: ₹{fullPaymentDiscountAmount}</span>
+                      </div>
+                    </label>
+                    <label className={`${styles.orderTypeCard} ${isPartial ? styles.orderTypeCardActive : ''}`}>
+                      <input type="radio" name="orderType" value="PARTIAL" checked={isPartial} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
+                      <div>
+                        <strong>Partial payment</strong>
+                        <span>Pay now ₹99, balance on delivery</span>
+                      </div>
+                    </label>
+                    <label className={`${styles.orderTypeCard} ${isCod ? styles.orderTypeCardActive : ''}`}>
+                      <input type="radio" name="orderType" value="COD" checked={isCod} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
+                      <div>
+                        <strong>Cash on Delivery</strong>
+                        <span>₹50 convenience fee extra</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className={styles.summaryBox}>
+                    <h4>Order summary</h4>
+                    <div><span>Subtotal</span><span>₹{baseTotal}</span></div>
+                    <div><span>Shipping</span><span>Free</span></div>
+                    {isPayFull && <div><span>Online discount (10%)</span><span>- ₹{discountAmount}</span></div>}
+                    {isCod && <div><span>COD convenience fee</span><span>+ ₹50</span></div>}
+                    <div className={styles.summaryFinal}><span>Total</span><span>₹{payableTotal}</span></div>
+                    <div className={styles.summaryPayNow}><span>Pay now</span><span>₹{payNowAmount}</span></div>
+                  </div>
+
+                  <div className={styles.stepActions}>
+                    <button type="button" className={styles.secondaryBtn} onClick={() => setCurrentStep(1)}>Back</button>
+                    <button type="submit" className={styles.payBtn} disabled={loading || !hasSelectedOrderType} style={{ marginTop: 0 }}>
+                      {loading ? 'Processing Securely...' : <>{isCod ? 'Place order' : 'Pay'} <span style={{ fontSize: '1.2rem' }}>→</span></>}
+                    </button>
+                  </div>
+                </>
+              )}
             </form>
           </div>
         </motion.div>

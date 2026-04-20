@@ -166,7 +166,6 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                 <ProductImageCarousel images={p.images && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : [])} name={p.name} />
               </Link>
               <div style={{ padding: 'clamp(0.6rem, 2vw, 1.25rem)', minWidth: 0 }}>
-                <div style={{ display: 'inline-block', background: 'rgba(255, 179, 0, 0.2)', color: 'var(--color-tertiary)', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', fontSize: '0.7rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase' }}>{p.category}</div>
                 {(() => {
                   const allVariants = getAllVariants(p);
                   const vi = selectedVariants[p._id] || 0;

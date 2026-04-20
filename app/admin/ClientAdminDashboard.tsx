@@ -8,7 +8,7 @@ import 'react-confirm-alert/src/react-confirm-alert.css';
 import { toast } from 'sonner';
 
 interface Product { _id: string; name: string; price: number; discount?: number; quantity?: number; unit?: string; images?: string[]; imageUrl?: string; createdAt: string; description?: string; inStock?: boolean; variants?: any[]; }
-interface Order { _id: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; address: any; products: any[]; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; }
+interface Order { _id: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; refundStatus?: string; refundFailureReason?: string; refundInitiatedAt?: string; refundCompletedAt?: string; refundTimeline?: any[]; address: any; products: any[]; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; }
 
 export default function ClientAdminDashboard({ initialProducts, initialOrders, initialVisitors = [] }: any) {
   const router = useRouter();
@@ -26,9 +26,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
   // New states for orders tab
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
-  const [liveRefunds, setLiveRefunds] = useState<any[]>([]);
-  const [isFetchingLiveRefunds, setIsFetchingLiveRefunds] = useState(false);
-  const [refundType, setRefundType] = useState<'full' | 'deduct_99'>('full');
+  const [orderEditSnapshot, setOrderEditSnapshot] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
   const [orderPage, setOrderPage] = useState(1);
   const [orderFilterTab, setOrderFilterTab] = useState('NEW');
@@ -153,21 +151,6 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     }, 10000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (isEditingOrder && editingOrder && (editingOrder.paymentId || editingOrder.refundId) && editingOrder.paymentMethod?.toLowerCase() !== 'cash' && editingOrder.paymentMethod?.toLowerCase() !== 'cod') {
-      setIsFetchingLiveRefunds(true);
-      const query = editingOrder.paymentId ? `paymentId=${editingOrder.paymentId}` : `refundId=${editingOrder.refundId}`;
-      fetch(`/api/orders/refund/status?${query}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.success) setLiveRefunds(d.refunds || []);
-        })
-        .finally(() => setIsFetchingLiveRefunds(false));
-    } else {
-      setLiveRefunds([]);
-    }
-  }, [isEditingOrder, editingOrder?.paymentId, editingOrder?.refundId]);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,6 +307,9 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
           status: editingOrder.status,
           paymentMethod: editingOrder.paymentMethod,
           paymentStatus: editingOrder.paymentStatus,
+          refundStatus: editingOrder.refundStatus,
+          refundFailureReason: editingOrder.refundFailureReason,
+          refundTimeline: editingOrder.refundTimeline,
           address: editingOrder.address
         })
       });
@@ -332,6 +318,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
         toast.success('Order details securely updated');
         setIsEditingOrder(false);
         setEditingOrder(null);
+        setOrderEditSnapshot('');
       } else {
         toast.error('Failed to update order');
       }
@@ -340,6 +327,57 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const getEditableOrderSnapshot = (order: Order) =>
+    JSON.stringify({
+      customerName: order.customerName || '',
+      phone: order.phone || '',
+      email: order.email || '',
+      status: order.status || '',
+      paymentStatus: order.paymentStatus || '',
+      awbCode: order.awbCode || '',
+      courierName: order.courierName || '',
+      trackingLink: order.trackingLink || '',
+      address: {
+        street: order.address?.street || '',
+        city: order.address?.city || '',
+        state: order.address?.state || '',
+        pinCode: order.address?.pinCode || '',
+      },
+    });
+
+  const handleCloseOrderEditor = () => {
+    if (!editingOrder) {
+      setIsEditingOrder(false);
+      setEditingOrder(null);
+      setOrderEditSnapshot('');
+      return;
+    }
+
+    const hasUnsavedChanges = orderEditSnapshot !== '' && getEditableOrderSnapshot(editingOrder) !== orderEditSnapshot;
+    if (!hasUnsavedChanges) {
+      setIsEditingOrder(false);
+      setEditingOrder(null);
+      setOrderEditSnapshot('');
+      return;
+    }
+
+    confirmAlert({
+      title: 'Unsaved Changes',
+      message: 'You have unsaved order edits. Do you want to discard these changes and go back?',
+      buttons: [
+        {
+          label: 'Discard & Go Back',
+          onClick: () => {
+            setIsEditingOrder(false);
+            setEditingOrder(null);
+            setOrderEditSnapshot('');
+          }
+        },
+        { label: 'Keep Editing' }
+      ]
+    });
   };
 
   const handleProcessRefund = async (e: React.MouseEvent) => {
@@ -358,19 +396,13 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
               const res = await fetch('/api/orders/refund', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId: editingOrder._id, refundType })
+                body: JSON.stringify({ orderId: editingOrder._id })
               });
               const data = await res.json();
               if (res.ok) {
                 toast.success(data.message || 'Refund successfully processed');
-                setEditingOrder({ ...editingOrder!, paymentStatus: 'refund initiated', refundId: data.refundId });
+                setEditingOrder({ ...editingOrder!, paymentStatus: 'refund initiated', refundStatus: 'initiated', refundId: data.refundId });
                 fetchData();
-                const query = editingOrder.paymentId ? `paymentId=${editingOrder.paymentId}` : `refundId=${data.refundId}`;
-                fetch(`/api/orders/refund/status?${query}`)
-                  .then(r => r.json())
-                  .then(d => {
-                    if (d.success) setLiveRefunds(d.refunds || []);
-                  });
               } else {
                 toast.error(data.error || 'Failed to process refund');
               }
@@ -384,6 +416,50 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
         { label: 'Cancel' }
       ]
     });
+  };
+
+  const handleSyncRefundStatus = async () => {
+    if (!editingOrder || (!editingOrder.paymentId && !editingOrder.refundId)) return;
+    setIsSubmitting(true);
+    try {
+      const query = editingOrder.paymentId ? `paymentId=${editingOrder.paymentId}` : `refundId=${editingOrder.refundId}`;
+      const res = await fetch(`/api/orders/refund/status?${query}&orderId=${editingOrder._id}`);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to sync refund status');
+        return;
+      }
+
+      const refunds = Array.isArray(data.refunds) ? data.refunds : [];
+      const latestRefund = refunds
+        .slice()
+        .sort((a: any, b: any) => Number(b?.created_at || 0) - Number(a?.created_at || 0))[0];
+
+      if (latestRefund) {
+        const latestStatus = String(latestRefund.status || '').toLowerCase();
+        const nextPaymentStatus = latestStatus === 'processed' ? 'refunded' : latestStatus === 'failed' ? 'refund failed' : 'refund initiated';
+        const nextCompletedAt = latestStatus === 'processed' && latestRefund.created_at
+          ? new Date(Number(latestRefund.created_at) * 1000).toISOString()
+          : editingOrder.refundCompletedAt;
+
+        setEditingOrder({
+          ...editingOrder,
+          paymentStatus: nextPaymentStatus,
+          refundStatus: latestStatus || editingOrder.refundStatus,
+          refundFailureReason: latestStatus === 'failed'
+            ? (latestRefund.error_description || latestRefund.status_details?.reason || editingOrder.refundFailureReason)
+            : editingOrder.refundFailureReason,
+          refundCompletedAt: nextCompletedAt,
+        });
+      }
+
+      fetchData();
+      toast.success('Refund status synced');
+    } catch {
+      toast.error('Network error while syncing refund status');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleLogout = () => {
@@ -403,7 +479,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
   };
 
   // Analytics Metrics
-  const validOrdersForMetrics = orders.filter(o => o.paymentStatus === 'paid' || o.paymentStatus?.toLowerCase().includes('cod') || !o.paymentStatus);
+  const validOrdersForMetrics = orders.filter(o => o.paymentStatus === 'paid' || !o.paymentStatus);
   const totalRevenue = validOrdersForMetrics.reduce((acc, curr) => acc + (!['CANCELLED', 'RTO', 'CANCELLED_BEFORE_DISPATCH'].includes(curr.status?.toUpperCase() || '') ? curr.totalAmount : 0), 0);
   const pendingOrders = validOrdersForMetrics.filter(o => o.status === 'Pending').length;
 
@@ -465,8 +541,9 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
               const pendingCount = validOrdersForMetrics.filter(o => o.status === 'Pending' || o.status === 'Processing').length;
               const deliveredCount = validOrdersForMetrics.filter(o => o.status === 'Delivered').length;
               const shippedCount = validOrdersForMetrics.filter(o => o.status === 'Shipped').length;
-              const onlineCount = validOrdersForMetrics.filter(o => o.paymentMethod === 'Razorpay').length;
-              const codCount = dAll.count - onlineCount;
+              const onlineFullCount = validOrdersForMetrics.filter(o => o.paymentMethod === 'Razorpay').length;
+              const partialCount = validOrdersForMetrics.filter(o => o.paymentMethod?.toLowerCase() === 'partial').length;
+              const codCount = validOrdersForMetrics.filter(o => o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod').length;
               const outOfStock = products.filter(p => p.inStock === false).length;
 
               const filterVisitors = (dateLimit: Date) => initialVisitors.filter((v: string) => new Date(v) >= dateLimit).length;
@@ -581,11 +658,15 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                         <span style={{ fontWeight: 800, color: '#1e293b' }}>₹{aov.toLocaleString('en-IN')}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px dashed #f1f5f9' }}>
-                        <span style={{ color: '#64748b', fontWeight: 600 }}>Online Payments (Razorpay)</span>
-                        <span style={{ fontWeight: 800, color: '#10b981' }}>{onlineCount} Orders</span>
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>Online Full Payment</span>
+                        <span style={{ fontWeight: 800, color: '#10b981' }}>{onlineFullCount} Orders</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px dashed #f1f5f9' }}>
-                        <span style={{ color: '#64748b', fontWeight: 600 }}>Cash on Delivery (COD)</span>
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>Partial Payment</span>
+                        <span style={{ fontWeight: 800, color: '#0f766e' }}>{partialCount} Orders</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px dashed #f1f5f9' }}>
+                        <span style={{ color: '#64748b', fontWeight: 600 }}>Cash on Delivery</span>
                         <span style={{ fontWeight: 800, color: '#f59e0b' }}>{codCount} Orders</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px dashed #f1f5f9' }}>
@@ -616,7 +697,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                   <div className={styles.editOrderCard} style={{ color: '#1e293b', background: '#fff', padding: '1rem', borderRadius: '4px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
                       <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#1e293b' }}>Edit Order: #{editingOrder._id.slice(-6).toUpperCase()}</h3>
-                      <button onClick={() => setIsEditingOrder(false)} style={{ color: '#1e293b', background: '#e2e8f0', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>Back</button>
+                      <button onClick={handleCloseOrderEditor} style={{ color: '#1e293b', background: '#e2e8f0', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>Back</button>
                     </div>
 
                     <form onSubmit={handleUpdateOrderDetails} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -675,7 +756,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
         <div style={{ fontWeight: 800, fontSize: '1rem', color: '#10b981' }}>Total: ₹{editingOrder.totalAmount}</div>
       </div>
       
-      {(editingOrder.paymentMethod === 'Cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod' || editingOrder.paymentStatus?.toLowerCase().includes('cod')) && editingOrder.totalAmount > 99 && (
+      {((editingOrder.paymentMethod === 'Cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod')) && editingOrder.totalAmount > 99 && (
          <div style={{ marginBottom: '12px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', color: '#991b1b', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🚨 COD Mode Active</span>
            <span style={{ fontSize: '0.9rem', fontWeight: 900 }}>To Collect: ₹{editingOrder.totalAmount - 99}</span>
@@ -717,28 +798,34 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
       </h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Payment Method</label>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order Type</label>
           <input 
             type="text" 
             readOnly 
             style={{ background: '#f1f5f9', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500, cursor: 'not-allowed' }} 
-            value={(editingOrder.paymentMethod?.toLowerCase() === 'cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod') ? 'Cash on Delivery (COD)' : 'Online Payment'} 
+            value={editingOrder.paymentMethod?.toLowerCase() === 'razorpay'
+              ? 'Online Full Payment'
+              : editingOrder.paymentMethod?.toLowerCase() === 'partial'
+                ? 'Partial Payment'
+                : 'Cash on Delivery'} 
           />
         </div>
-        <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Financial Status</label>
-          <select style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.paymentStatus || 'paid'} onChange={e => setEditingOrder({ ...editingOrder, paymentStatus: e.target.value })}>
-            <option value="payment processing/pending">Payment Processing/Pending</option>
-            <option value="paid">Paid (Pre-Paid & Advances)</option>
-            <option value="payment failed">Payment Failed</option>
-            <option value="refund initiated">Refund Initiated</option>
-            <option value="refunded">Refunded (Completed)</option>
-            <option value="refund failed">Refund Failed</option>
-          </select>
-        </div>
+        {['razorpay', 'partial'].includes(editingOrder.paymentMethod?.toLowerCase() || '') && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Financial Status</label>
+            <input
+              type="text"
+              readOnly
+              style={{ background: '#f1f5f9', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500, cursor: 'not-allowed' }}
+              value={editingOrder.paymentStatus || 'payment processing/pending'}
+            />
+          </div>
+        )}
         
+        {(editingOrder.paymentMethod?.toLowerCase() === 'razorpay' || editingOrder.paymentMethod?.toLowerCase() === 'partial') &&
+         (editingOrder.paymentStatus?.toLowerCase() !== 'payment failed') && (
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Received Payment</label>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Received Amount</label>
           {(() => {
             const hasFailedOrPending = ['payment failed', 'pending', 'payment processing', 'payment processing/pending'].includes(editingOrder.paymentStatus?.toLowerCase() || '');
             if (hasFailedOrPending) {
@@ -746,7 +833,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                 <div style={{ background: '#f1f5f9', padding: '10px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#475569', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px' }}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   <span style={{ fontSize: '0.75rem', opacity: 0.8, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount:</span>
-                  ₹{editingOrder.totalAmount || 0}
+                  ₹{editingOrder.paymentMethod?.toLowerCase() === 'partial' ? 99 : (editingOrder.totalAmount || 0)}
                   <span style={{ fontSize: '0.7rem', color: '#475569', opacity: 0.8, fontWeight: 700, marginLeft: '6px' }}>(Unpaid / Not Captured)</span>
                 </div>
               );
@@ -755,24 +842,23 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
               <div style={{ background: '#dcfce7', padding: '10px 12px', borderRadius: '4px', border: '1px solid #bbf7d0', color: '#166534', fontWeight: 800, fontSize: '0.9rem', display: 'flex', alignItems: 'center' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: '6px' }}><polyline points="20 6 9 17 4 12"></polyline></svg>
                 <span style={{ fontSize: '0.75rem', opacity: 0.8, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount:</span>
-                ₹{(editingOrder.paymentMethod?.toLowerCase() === 'cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod') ? '99' : (editingOrder.totalAmount || 0)}
-                <span style={{ fontSize: '0.7rem', color: '#166534', opacity: 0.8, fontWeight: 700, marginLeft: '6px' }}>{(editingOrder.paymentMethod?.toLowerCase() === 'cash' || editingOrder.paymentMethod?.toLowerCase() === 'cod') ? '(Partial Advance)' : '(Full Payment)'}</span>
+                ₹{editingOrder.paymentMethod?.toLowerCase() === 'partial' ? 99 : (editingOrder.totalAmount || 0)}
               </div>
             );
           })()}
         </div>
-        
+        )}
+
         {/* Secure Refund Automation Block */}
         {(editingOrder.status === 'CANCELLED' || editingOrder.status === 'RTO') && 
-         (editingOrder.paymentMethod?.toLowerCase() !== 'cash' && editingOrder.paymentMethod?.toLowerCase() !== 'cod') && 
-         ['paid', 'refund failed'].includes(editingOrder.paymentStatus?.toLowerCase() || '') && (
+         ['razorpay', 'partial'].includes(editingOrder.paymentMethod?.toLowerCase() || '') && 
+         (
+          ['paid', 'refund failed'].includes(editingOrder.paymentStatus?.toLowerCase() || '') ||
+          (editingOrder.paymentStatus?.toLowerCase() || '').includes('advance paid')
+         ) && (
           <div style={{ marginTop: '8px', background: '#f8fafc', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
-            <div style={{ marginBottom: '10px' }}>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Refund Configuration</label>
-              <select value={refundType} onChange={e => setRefundType(e.target.value as any)} style={{ background: '#fff', width: '100%', padding: '8px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none', marginBottom: '8px', color: '#1e293b', fontWeight: 600 }}>
-                <option value="full">Full Refund (₹{(editingOrder.totalAmount || 0)})</option>
-                <option value="deduct_99">Deduct ₹99 Shipping (₹{Math.max(0, (editingOrder.totalAmount || 0) - 99)})</option>
-              </select>
+            <div style={{ marginBottom: '10px', fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+              Full captured amount refund will be initiated immediately for {editingOrder.status} orders.
             </div>
 
             <button onClick={handleProcessRefund} disabled={isSubmitting || !editingOrder.paymentId} type="button" style={{ width: '100%', padding: '10px', background: '#ef4444', color: 'white', fontWeight: 800, border: 'none', borderRadius: '4px', cursor: (isSubmitting || !editingOrder.paymentId) ? 'not-allowed' : 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -784,65 +870,62 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
             )}
           </div>
         )}
-        
-        {/* Real-time Refund Timeline */}
-        {liveRefunds.length > 0 && (
-          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Gateway Refund Timeline</label>
-            {isFetchingLiveRefunds ? (
-               <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Syncing timeline with Razorpay...</p>
-            ) : (
-               liveRefunds.map((ref: any, idx: number) => {
-                 const statusColors: Record<string, {bg: string, border: string, color: string}> = {
-                   processed: { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
-                   failed: { bg: '#fef2f2', border: '#fecaca', color: '#991b1b' },
-                   pending: { bg: '#fdf8e3', border: '#fef08a', color: '#854d0e' },
-                 };
-                 const theme = statusColors[ref.status] || { bg: '#f8fafc', border: '#e2e8f0', color: '#475569' };
 
-                 return (
-                   <div key={idx} style={{ background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '4px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.color, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                         {ref.status === 'processed' ? 'Refunded Success' : ref.status === 'failed' ? 'Refund Failed' : ref.status}
-                       </span>
-                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.color, display: 'flex', alignItems: 'center' }}>
-                         <span style={{ opacity: 0.75, fontSize: '0.7rem', marginRight: '6px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Refund Amount:</span>
-                         ₹{(ref.amount / 100).toFixed(2)}
-                       </span>
-                     </div>
-                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', color: '#475569' }}>
-                       <div><strong style={{ opacity: 0.8 }}>Initiated:</strong> {new Date(ref.created_at * 1000).toLocaleString('en-IN')}</div>
-                       {ref.status === 'processed' && <div><strong style={{ opacity: 0.8 }}>Processed:</strong> {new Date(ref.created_at * 1000).toLocaleString('en-IN')} (Bank Accepted)</div>}
-                       {ref.status === 'failed' && (
-                         <div style={{ color: '#991b1b', marginTop: '2px' }}>
-                           <strong style={{ opacity: 0.8 }}>Failed Reason:</strong> {ref.error_description || ref.status_details?.reason || 'Bank validation rejected. Please initiate again.'}
-                         </div>
-                       )}
-                       {ref.arn && <div><strong style={{ opacity: 0.8 }}>Bank Ref (ARN):</strong> {ref.arn}</div>}
-                       {ref.payment_source && (
-                         <div style={{ marginTop: '4px', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '4px' }}>
-                           <strong style={{ opacity: 0.8, textTransform: 'capitalize' }}>To {ref.payment_source.method || 'Account'}:</strong>{' '}
-                           {ref.payment_source.vpa || ref.payment_source.bank || ref.payment_source.card || ref.payment_source.wallet || 'Original Source'}
-                         </div>
-                       )}
-                       <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>Razorpay Record: {ref.id}</div>
-                     </div>
-                   </div>
-                 );
-               })
+        {(editingOrder.refundId || editingOrder.refundInitiatedAt) &&
+         (editingOrder.paymentStatus?.toLowerCase() !== 'payment failed') && (
+          (() => {
+            const timeline = Array.isArray(editingOrder.refundTimeline) ? editingOrder.refundTimeline : [];
+            const latestGatewayEvent = [...timeline].reverse().find((event: any) => String(event?.stage || '').startsWith('gateway_'));
+            const processedGatewayEvent = [...timeline].reverse().find((event: any) => String(event?.stage || '') === 'gateway_processed');
+            const arnValue = latestGatewayEvent?.arn || '-';
+            const rrnValue = latestGatewayEvent?.rrn || '-';
+            const refundedTimeValue = editingOrder.refundCompletedAt || processedGatewayEvent?.timestamp || null;
+            return (
+          <div style={{ marginTop: '8px', background: '#f8fafc', padding: '10px 12px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#334155', fontSize: '0.78rem' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+              Refund Information
+            </div>
+            <button
+              type="button"
+              onClick={handleSyncRefundStatus}
+              disabled={isSubmitting}
+              style={{ marginBottom: '8px', background: '#e2e8f0', border: '1px solid #cbd5e1', color: '#1e293b', padding: '6px 10px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+            >
+              {isSubmitting ? 'Syncing...' : 'Sync Refund Status'}
+            </button>
+            {editingOrder.refundId && (
+              <div style={{ marginBottom: '4px' }}>
+                <strong>Reference Number:</strong> {editingOrder.refundId}
+              </div>
+            )}
+            {editingOrder.refundInitiatedAt && (
+              <div>
+                <strong>Initiated Time:</strong> {new Date(editingOrder.refundInitiatedAt).toLocaleString('en-IN')}
+              </div>
+            )}
+            <div style={{ marginTop: '2px' }}>
+              <strong>Refund Processed Time:</strong>{' '}
+              {refundedTimeValue ? new Date(refundedTimeValue).toLocaleString('en-IN') : 'Pending'}
+            </div>
+            {(arnValue !== '-' || rrnValue !== '-') && (
+              <div style={{ marginTop: '4px' }}>
+                <strong>ARN/RRN:</strong> {arnValue !== '-' ? arnValue : rrnValue}
+              </div>
+            )}
+            {rrnValue !== '-' && (
+              <div style={{ marginTop: '2px' }}>
+                <strong>RRN (Gateway Ref):</strong> {rrnValue}
+              </div>
             )}
           </div>
+            );
+          })()
         )}
-
-        {/* Fallback Display for Unlinkable Refunds */}
-        {liveRefunds.length === 0 && !isFetchingLiveRefunds && editingOrder.refundId && ['refund initiated', 'refunded', 'refund failed'].includes(editingOrder.paymentStatus?.toLowerCase() || '') && (
-           <div style={{ marginTop: '8px', background: '#f8fafc', padding: '8px 12px', borderRadius: '4px', border: '1px solid #e2e8f0', color: '#475569', fontSize: '0.8rem', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-             <span style={{ display: 'flex', alignItems: 'center' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> System Refund Record</span>
-             <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>Tracker ID: {editingOrder.refundId}</span>
-             <span style={{ fontSize: '0.65rem', fontStyle: 'italic', color: '#94a3b8' }}>Real-time Gateway timeline currently unavailable.</span>
-           </div>
+        
+        {(editingOrder.paymentStatus?.toLowerCase() === 'refund failed' && editingOrder.refundFailureReason) && (
+          <div style={{ marginTop: '8px', background: '#fef2f2', padding: '10px 12px', borderRadius: '4px', border: '1px solid #fecaca', color: '#991b1b', fontSize: '0.78rem', fontWeight: 600 }}>
+            Failure reason: {editingOrder.refundFailureReason}
+          </div>
         )}
       </div>
     </div>
@@ -1175,11 +1258,6 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                       <span style={{ opacity: 0.6, fontSize: '0.65rem', marginRight: '4px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amt:</span> 
                                       ₹{o.totalAmount}
                                     </span>
-                                    {(o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod' || o.paymentStatus?.toLowerCase().includes('cod')) && (
-                                      <div style={{ color: '#ef4444', fontSize: '0.6rem', marginTop: '4px' }}>
-                                        COD (Bal: ₹{o.totalAmount > 99 ? o.totalAmount - 99 : o.totalAmount})
-                                      </div>
-                                    )}
                                   </td>
                                   <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                                     <span style={{
@@ -1193,7 +1271,11 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                       letterSpacing: '0.5px',
                                       border: o.paymentStatus === 'refunded' ? '1px solid #cbd5e1' : 'none'
                                     }}>
-                                      {o.paymentStatus === 'paid' && (o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod') ? 'Advance Paid' : (o.paymentStatus || 'pending')}
+                                      {o.paymentStatus === 'paid' && (o.paymentMethod === 'Cash' || o.paymentMethod?.toLowerCase() === 'cod')
+                                        ? 'COD: Part Payment Collected'
+                                        : o.paymentStatus === 'paid' && o.paymentMethod?.toLowerCase() === 'partial'
+                                          ? 'partial paid'
+                                          : (o.paymentStatus || 'pending')}
                                     </span>
                                   </td>
                                   <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>
@@ -1216,7 +1298,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                       </span>
                                   </td>
                                   <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>
-                                      <button className={styles.adminWhiteBtn} style={{ padding: '6px 14px', fontSize: '0.65rem', whiteSpace: 'nowrap', pointerEvents: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#334155' }} onClick={() => { setEditingOrder(o); setIsEditingOrder(true); setRefundType('full'); }}>
+                                      <button className={styles.adminWhiteBtn} style={{ padding: '6px 14px', fontSize: '0.65rem', whiteSpace: 'nowrap', pointerEvents: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#334155' }} onClick={() => { setEditingOrder(o); setOrderEditSnapshot(getEditableOrderSnapshot(o)); setIsEditingOrder(true); }}>
                                         Manage <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                                       </button>
                                   </td>

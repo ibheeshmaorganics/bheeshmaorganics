@@ -147,7 +147,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const paymentMethod = body.paymentMethod === 'Razorpay' ? 'Razorpay' : 'Cash';
+    const orderType = typeof body.orderType === 'string' ? body.orderType : '';
+    const paymentMethod = orderType === 'PAY_FULL'
+      ? 'Razorpay'
+      : orderType === 'PARTIAL'
+        ? 'Partial'
+        : 'Cash';
     const { products: sanitizedProducts, subtotalAmount } = await buildSanitizedOrderProducts(body.products);
     const onlineDiscountAmount = calculateOnlineDiscount(subtotalAmount, paymentMethod);
     const totalAmount = calculatePayableTotal(subtotalAmount, paymentMethod);
@@ -161,11 +166,11 @@ export async function POST(req: NextRequest) {
       totalAmount,
       status: 'Pending',
       paymentMethod,
-      paymentStatus: paymentMethod === 'Razorpay' ? 'draft_intent' : 'cod',
+      paymentStatus: paymentMethod === 'Cash' ? 'cod' : 'draft_intent',
     };
 
     const order = await prisma.order.create({ data: orderData });
-    if (paymentMethod === 'Razorpay' || paymentMethod === 'Cash') {
+    if (paymentMethod === 'Razorpay' || paymentMethod === 'Partial') {
       try {
         if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
           throw new Error("Razorpay environment variables are missing. Please check your .env file and restart your server.");
@@ -176,8 +181,8 @@ export async function POST(req: NextRequest) {
           key_secret: process.env.RAZORPAY_KEY_SECRET,
         });
 
-        // For COD, advance payment is 99 rupees
-        const payAmount = paymentMethod === 'Cash' ? 99 : totalAmount;
+        // Partial orders collect only ₹99 advance payment
+        const payAmount = paymentMethod === 'Partial' ? Math.min(99, totalAmount) : totalAmount;
 
         const options = {
           amount: Math.round(payAmount * 100), // amount in paise
@@ -211,7 +216,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fallback if somehow neither Cash nor Razorpay is sent
+    // COD orders are created without online payment intent
     return NextResponse.json({
       success: true,
       orderId: order.id,

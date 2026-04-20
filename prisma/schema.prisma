@@ -17,6 +17,7 @@ model Admin {
 model Product {
   id          String   @id @default(uuid())
   name        String
+  subHeading  String?
   description String
   price       Float
   discount    Float    @default(0)
@@ -46,6 +47,11 @@ model Order {
   trackingLink      String?
   paymentStatus     String   @default("payment processing/pending")
   refundId          String?
+  refundStatus      String?
+  refundFailureReason String?
+  refundInitiatedAt DateTime?
+  refundCompletedAt DateTime?
+  refundTimeline    Json?
 }
 
 model Visitor {

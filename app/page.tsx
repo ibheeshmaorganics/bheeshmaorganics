@@ -67,31 +67,78 @@ export default function Home() {
               <span>✓ Ayurvedic Inspired</span>
             </div>
 
-            <div className={styles.platformHeroRow}>
-              <span className={styles.platformHeroLabel}> Buy Now On:</span>
-              <a
-                href="https://www.amazon.in/stores/BHEESHMAORGANICS/page/9E599402-C004-44CE-AD94-F92B6CE1B68A?lp_context_asin=B0GPQTGS4S&ref_=cm_sw_r_apann_ast_store_74NN36C7C6B899KEPKJB&dplnk=Y&dplnkId=f4420508-c96c-4c8a-9f98-1eddb62f7e98"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.amazonPill}
-              >
-                amazon.in
-              </a>
-              <a
-                href="https://dl.flipkart.com/dl/bheeshma-organics-himalayan-sea-buckthorn-pulp-concentrate/p/itm845870d47a9f3?pid=DAJHHHHZF5XWGMQF&lid=LSTDAJHHHHZF5XWGMQFEKEQRZ&hl_lid=&marketplace=FLIPKART&fm=eyJ3dHAiOiJhdGxhc19wcm9kdWN0X3N1bW1hcnlfZ3JpZF9iZWF1dHkiLCJwcnB0Ijoic3AiLCJtaWQiOiJhZHMifQ=="
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.flipkartPill}
-              >
-                Flipkart
-              </a>
-            </div>
           </div>
 
           <div
             className={styles.heroImageContainer}
           >
             <Image src="https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/group_products" alt="Bheeshma Organics Product Collection" fill sizes="(max-width: 768px) 100vw, 380px" className={styles.heroMainImage} style={{ objectFit: 'cover' }} priority />
+          </div>
+        </div>
+      </section>
+
+      {/* Marketplace Availability Section */}
+      <section className={styles.platformSection}>
+        <div className="container">
+          <div className={styles.platformContent}>
+            <div className={styles.platformLogoRow}>
+              <a
+                href="https://www.amazon.in/stores/BHEESHMAORGANICS/page/9E599402-C004-44CE-AD94-F92B6CE1B68A?lp_context_asin=B0GPQTGS4S&ref_=cm_sw_r_apann_ast_store_74NN36C7C6B899KEPKJB&dplnk=Y&dplnkId=f4420508-c96c-4c8a-9f98-1eddb62f7e98"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.platformLogoLink}
+                aria-label="Visit Bheeshma Organics Amazon Brand Store"
+              >
+                <Image
+                  src="https://res.cloudinary.com/dmqxeysfq/image/upload/q_auto/f_auto/v1776673075/amazon-logo-amazon-icon-free-free-vector_qfjwhq.jpg"
+                  alt="Available on Amazon"
+                  width={220}
+                  height={80}
+                  className={styles.platformLogo}
+                />
+              </a>
+              <a
+                href="https://dl.flipkart.com/dl/bheeshma-organics-himalayan-sea-buckthorn-pulp-concentrate/p/itm845870d47a9f3?pid=DAJHHHHZF5XWGMQF&lid=LSTDAJHHHHZF5XWGMQFEKEQRZ&hl_lid=&marketplace=FLIPKART&fm=eyJ3dHAiOiJhdGxhc19wcm9kdWN0X3N1bW1hcnlfZ3JpZF9iZWF1dHkiLCJwcnB0Ijoic3AiLCJtaWQiOiJhZHMifQ=="
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.platformLogoLink}
+                aria-label="View Bheeshma Organics product on Flipkart"
+              >
+                <Image
+                  src="https://res.cloudinary.com/dmqxeysfq/image/upload/q_auto/f_auto/v1776673076/Flipkart_logo__2026_kr1lis.svg"
+                  alt="Available on Flipkart"
+                  width={220}
+                  height={80}
+                  className={styles.platformLogo}
+                />
+              </a>
+            </div>
+
+            <p className={styles.platformEyebrow}>Now Available Online</p>
+            <h2 className={styles.platformHeading}>Shop with confidence on trusted marketplaces</h2>
+            <p className={styles.platformSub}>
+              Bheeshma Organics is now available on Amazon and Flipkart for easy ordering, secure payments, and reliable delivery.
+              Explore our official listings and buy with trust.
+            </p>
+
+            <div className={styles.platformActionRow}>
+              <a
+                href="https://www.amazon.in/stores/BHEESHMAORGANICS/page/9E599402-C004-44CE-AD94-F92B6CE1B68A?lp_context_asin=B0GPQTGS4S&ref_=cm_sw_r_apann_ast_store_74NN36C7C6B899KEPKJB&dplnk=Y&dplnkId=f4420508-c96c-4c8a-9f98-1eddb62f7e98"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.platformActionAmazon}
+              >
+                Visit Amazon Store
+              </a>
+              <a
+                href="https://dl.flipkart.com/dl/bheeshma-organics-himalayan-sea-buckthorn-pulp-concentrate/p/itm845870d47a9f3?pid=DAJHHHHZF5XWGMQF&lid=LSTDAJHHHHZF5XWGMQFEKEQRZ&hl_lid=&marketplace=FLIPKART&fm=eyJ3dHAiOiJhdGxhc19wcm9kdWN0X3N1bW1hcnlfZ3JpZF9iZWF1dHkiLCJwcnB0Ijoic3AiLCJtaWQiOiJhZHMifQ=="
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.platformActionFlipkart}
+              >
+                View on Flipkart
+              </a>
+            </div>
           </div>
         </div>
       </section>

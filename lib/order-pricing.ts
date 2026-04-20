@@ -7,5 +7,6 @@ export function calculateOnlineDiscount(subtotalAmount: number, paymentMethod: s
 
 export function calculatePayableTotal(subtotalAmount: number, paymentMethod: string): number {
   const discount = calculateOnlineDiscount(subtotalAmount, paymentMethod);
-  return Math.max(0, subtotalAmount - discount);
+  const codConvenienceFee = paymentMethod === 'Cash' ? 50 : 0;
+  return Math.max(0, subtotalAmount - discount + codConvenienceFee);
 }
