@@ -6,8 +6,9 @@ export async function POST(req: NextRequest) {
     const expectedSecret = process.env.SHIPROCKET_WEBHOOK_SECRET;
     const providedToken = req.headers.get('x-api-key') || req.headers.get('authorization') || req.headers.get('x-api-hybrid-auth');
 
-    // Securely lock the endpoint if the UI doesn't provide the exact secret (but silently return 200 for missing tokens during the initial Shiprocket test ping)
-    if (expectedSecret && providedToken !== expectedSecret && providedToken !== `Bearer ${expectedSecret}`) {
+    // Accept webhook when token header is missing (Shiprocket may omit it on some callbacks),
+    // but reject when a token is present and explicitly wrong.
+    if (expectedSecret && providedToken && providedToken !== expectedSecret && providedToken !== `Bearer ${expectedSecret}`) {
       return NextResponse.json({ success: true, warning: 'Unauthorized Webhook Attempt Ignored' }, { status: 200 });
     }
 
@@ -23,8 +24,22 @@ export async function POST(req: NextRequest) {
        return NextResponse.json({ success: true, message: 'Test Ping Acknowledged' });
     }
 
-    const awb = payload.awb || payload.awb_code || payload.shipment?.awb;
-    const shipmentId = payload.shipment_id?.toString() || payload.order_id?.toString();
+    const awb =
+      payload.awb ||
+      payload.awb_code ||
+      payload.awbCode ||
+      payload.shipment?.awb ||
+      payload.shipment?.awb_code;
+    const shipmentId =
+      payload.shipment_id?.toString() ||
+      payload.shipment?.id?.toString() ||
+      payload.order_id?.toString();
+    const channelOrderId =
+      payload.channel_order_id?.toString() ||
+      payload.channelOrderId?.toString() ||
+      payload.order?.channel_order_id?.toString() ||
+      payload.shipment?.channel_order_id?.toString() ||
+      '';
     const current_status = payload.current_status || payload.status || payload.shipment?.status;
 
     if ((!awb && !shipmentId) || !current_status) {
@@ -53,12 +68,33 @@ export async function POST(req: NextRequest) {
       internalStatus = 'CONFIRMED';
     }
 
-    // Match dynamically via AWB if tracking hook, or Shiprocket shipment_id if order hook
-    const matchWhere = awb ? { awbCode: awb } : { shiprocketOrderId: shipmentId };
+    const shipmentIdNormalized = shipmentId ? String(shipmentId).trim() : '';
+    const channelOrderIdNormalized = channelOrderId ? String(channelOrderId).trim() : '';
+    const shortOrderIdFromShipmentId = shipmentIdNormalized.startsWith('BO-') ? shipmentIdNormalized : `BO-${shipmentIdNormalized}`;
+    const shortOrderIdFromChannelId = channelOrderIdNormalized.startsWith('BO-') ? channelOrderIdNormalized : `BO-${channelOrderIdNormalized}`;
+    // Match robustly: by AWB first, then by Shiprocket shipment id, then by short order id (BO-xxxxxx).
+    const matchWhere = {
+      OR: [
+        ...(awb ? [{ awbCode: String(awb) }] : []),
+        ...(shipmentIdNormalized ? [{ shiprocketOrderId: shipmentIdNormalized }] : []),
+        ...(shipmentIdNormalized ? [{ shortOrderId: shipmentIdNormalized }, { shortOrderId: shortOrderIdFromShipmentId }] : []),
+        ...(channelOrderIdNormalized ? [{ shortOrderId: channelOrderIdNormalized }, { shortOrderId: shortOrderIdFromChannelId }] : []),
+      ],
+    };
     const matchedOrders = await prisma.order.findMany({
       where: matchWhere,
       select: { id: true, status: true, shipmentMeta: true }
     });
+
+    if (matchedOrders.length === 0) {
+      console.warn('[EXTERNAL WEBHOOK] No order matched webhook payload identifiers', {
+        awb: awb || null,
+        shipmentId: shipmentId || null,
+        channelOrderId: channelOrderId || null,
+        status: current_status,
+      });
+      return NextResponse.json({ success: true, warning: 'No matching order found' }, { status: 200 });
+    }
 
     for (const order of matchedOrders) {
       const existingMeta = order.shipmentMeta && typeof order.shipmentMeta === 'object' && !Array.isArray(order.shipmentMeta)

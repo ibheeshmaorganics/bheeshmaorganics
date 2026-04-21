@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
-import { toast } from 'sonner';
 import { type CartItem } from '@/lib/cart';
 import { useCart } from '@/hooks/useCart';
 import { upsertCartItem, updateCartItemQuantity } from '@/lib/cart-operations';
@@ -99,15 +98,11 @@ export default function ClientProductView({ product }: { product: ProductDetails
       productIdOriginal: product._id,
     };
     updateCart(upsertCartItem(cart, cartItem));
-    toast.success(`${displayName} added to cart!`);
   };
 
   const updateQuantity = (delta: number) => {
     const existingItem = cart.find((item) => item._id === activeCartId);
     if (!existingItem) return;
-    if (existingItem.quantity + delta <= 0) {
-      toast.info(`Removed from cart`);
-    }
     updateCart(updateCartItemQuantity(cart, activeCartId, delta));
   };
 

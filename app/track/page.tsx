@@ -180,7 +180,7 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
           </div>
         </div>
 
-        {!expanded && (order.awbCode || order.trackingLink) && !isSuccess && !isFailed && (
+        {!expanded && ['READY_TO_SHIP', 'SHIPPED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY'].includes((order.status || '').toUpperCase()) && !isSuccess && !isFailed && (
            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#059669', background: '#ecfdf5', padding: '6px 10px', borderRadius: '6px', fontWeight: 600 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
               {order.status === 'SHIPPED' || order.status === 'IN_TRANSIT' || order.status === 'OUT_FOR_DELIVERY' ? 'In Transit - Tracking active' : 'Ready to Ship'}

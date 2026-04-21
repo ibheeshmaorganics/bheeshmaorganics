@@ -53,6 +53,7 @@ export default function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showPopup, setShowPopup] = useState<{status: 'success'|'failed', message: string} | null>(null);
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
   const [formData, setFormData] = useState({
     customerName: '',
     phone: '',
@@ -78,7 +79,6 @@ export default function CheckoutPage() {
       newCart[idx].quantity += delta;
       if (newCart[idx].quantity <= 0) {
         newCart.splice(idx, 1);
-        toast.info("Item removed from cart");
       }
       setCartItems(newCart);
       writeCart(newCart);
@@ -89,7 +89,6 @@ export default function CheckoutPage() {
     const newCart = cartItems.filter(item => item._id !== productId);
     setCartItems(newCart);
     writeCart(newCart);
-    toast.info("Item removed from cart");
     if (newCart.length === 0) {
       // Do nothing, UI will gracefully render the empty cart state natively
     }
@@ -107,6 +106,12 @@ export default function CheckoutPage() {
   const payNowAmount = isPayFull ? payableTotal : isPartial ? Math.min(99, payableTotal) : 0;
   const payLaterAmount = Math.max(0, payableTotal - payNowAmount);
   const isPhoneValid = /^\d{10}$/.test(formData.phone);
+  const hasCustomerName = formData.customerName.trim().length > 0;
+  const hasEmail = formData.email.trim().length > 0;
+  const hasStreet = formData.street.trim().length > 0;
+  const hasCity = formData.city.trim().length > 0;
+  const hasState = formData.state.trim().length > 0;
+  const hasPinCode = formData.pinCode.trim().length > 0;
 
   const handlePhoneChange = (value: string) => {
     const onlyDigits = value.replace(/\D/g, '').slice(0, 10);
@@ -130,12 +135,22 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setShowFieldErrors(true);
     if (cartItems.length === 0) {
       toast.error('Your cart is empty! Please add products before checking out.');
       return router.push('/products');
     }
+    if (!hasCustomerName || !hasEmail || !hasStreet || !hasCity || !hasState || !hasPinCode) {
+      toast.error('Please fill all required fields.');
+      return;
+    }
     if (!isPhoneValid) {
       toast.error('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (!hasSelectedOrderType) {
+      toast.error('Please select an order type.');
+      scrollToPaymentMethodView();
       return;
     }
     setLoading(true);
@@ -320,10 +335,10 @@ export default function CheckoutPage() {
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                          <button type="button" onClick={() => updateQuantity(item._id, -1)} style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', border: 'none', cursor: 'pointer', borderRadius: '6px 0 0 6px' }}>-</button>
-                          <span style={{ fontSize: '0.9rem', width: '32px', textAlign: 'center', fontWeight: 'bold' }}>{item.quantity}</span>
-                          <button type="button" onClick={() => updateQuantity(item._id, 1)} style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-tertiary)', color: 'white', fontWeight: 'bold', border: 'none', cursor: 'pointer', borderRadius: '0 6px 6px 0' }}>+</button>
+                        <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '10px', border: '1px solid #cbd5e1', boxShadow: '0 2px 8px rgba(15,23,42,0.06)', overflow: 'hidden' }}>
+                          <button type="button" onClick={() => updateQuantity(item._id, -1)} style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#16a34a', color: '#ffffff', fontWeight: 800, border: 'none', cursor: 'pointer', fontSize: '1rem' }}>-</button>
+                          <span style={{ fontSize: '0.95rem', width: '38px', textAlign: 'center', fontWeight: 800, color: '#0f172a' }}>{item.quantity}</span>
+                          <button type="button" onClick={() => updateQuantity(item._id, 1)} style={{ width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#16a34a', color: 'white', fontWeight: 800, border: 'none', cursor: 'pointer', fontSize: '1rem' }}>+</button>
                         </div>
                         <span style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--color-primary-dark)' }}>₹{item.price * item.quantity}</span>
                       </div>
@@ -368,8 +383,21 @@ export default function CheckoutPage() {
                     <div className={styles.mobileProductList}>
                       {cartItems.map((item, i) => (
                         <div key={`mobile-item-${i}`} className={styles.mobileProductItem}>
-                          <span className={styles.mobileProductName}>{item.name} x {item.quantity}</span>
-                          <strong>₹{item.price * item.quantity}</strong>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span className={styles.mobileProductName}>{item.name}</span>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: 700 }}>Qty: {item.quantity}</div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                            <strong>₹{item.price * item.quantity}</strong>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', borderRadius: '999px', border: '1px solid #cbd5e1', background: '#fff', overflow: 'hidden', boxShadow: '0 1px 4px rgba(15,23,42,0.06)' }}>
+                                <button type="button" onClick={() => updateQuantity(item._id, -1)} style={{ width: '26px', height: '26px', border: 'none', background: '#16a34a', color: '#ffffff', fontWeight: 800, cursor: 'pointer', lineHeight: 1 }}>-</button>
+                                <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>{item.quantity}</span>
+                                <button type="button" onClick={() => updateQuantity(item._id, 1)} style={{ width: '26px', height: '26px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 800, cursor: 'pointer', lineHeight: 1 }}>+</button>
+                              </div>
+                              <button type="button" onClick={() => removeItem(item._id)} style={{ border: 'none', background: '#fee2e2', color: '#b91c1c', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', padding: '4px 7px', borderRadius: '999px' }}>Remove</button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -381,35 +409,50 @@ export default function CheckoutPage() {
 
                   <div className={styles.inputGrid}>
                     <h3 className={styles.sectionLabel}>Customer details</h3>
-                    <input type="text" placeholder="Full Name" value={formData.customerName} className={`${styles.inputField} ${styles.fullWidth}`} required onChange={e => setFormData({ ...formData, customerName: e.target.value })} />
+                    <input type="text" placeholder="Full Name" value={formData.customerName} className={`${styles.inputField} ${styles.fullWidth}`} onChange={e => setFormData({ ...formData, customerName: e.target.value })} style={showFieldErrors && !hasCustomerName ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px rgba(239,68,68,0.12)' } : undefined} />
                     <input
                       type="tel"
                       placeholder="Phone Number"
                       value={formData.phone}
                       className={styles.inputField}
-                      required
+                      
                       inputMode="numeric"
                       pattern="[0-9]{10}"
                       maxLength={10}
                       title="Enter 10-digit mobile number"
                       onChange={e => handlePhoneChange(e.target.value)}
+                      style={showFieldErrors && !isPhoneValid ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px rgba(239,68,68,0.12)' } : undefined}
                     />
-                    <input type="email" placeholder="Email Address" value={formData.email} className={styles.inputField} required onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                    {showFieldErrors && !isPhoneValid && (
+                      <div style={{ marginTop: '-6px', fontSize: '0.74rem', color: '#dc2626', fontWeight: 700 }}>
+                        Phone number must be exactly 10 digits.
+                      </div>
+                    )}
+                    <input type="email" placeholder="Email Address" value={formData.email} className={styles.inputField} onChange={e => setFormData({ ...formData, email: e.target.value })} style={showFieldErrors && !hasEmail ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px rgba(239,68,68,0.12)' } : undefined} />
 
                     <h3 className={styles.sectionLabel}>Address details</h3>
-                    <input type="text" placeholder="Door No. / Village / Area" value={formData.street} className={`${styles.inputField} ${styles.fullWidth}`} required onChange={e => setFormData({ ...formData, street: e.target.value })} />
-                    <input type="text" placeholder="City" value={formData.city} className={styles.inputField} required onChange={e => setFormData({ ...formData, city: e.target.value })} />
-                    <input type="text" placeholder="State" value={formData.state} className={styles.inputField} required onChange={e => setFormData({ ...formData, state: e.target.value })} />
-                    <input type="text" placeholder="PIN Code" value={formData.pinCode} className={styles.inputField} required onChange={e => setFormData({ ...formData, pinCode: e.target.value })} />
+                    <input type="text" placeholder="Door No. / Village / Area" value={formData.street} className={`${styles.inputField} ${styles.fullWidth}`} onChange={e => setFormData({ ...formData, street: e.target.value })} style={showFieldErrors && !hasStreet ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px rgba(239,68,68,0.12)' } : undefined} />
+                    <input type="text" placeholder="City" value={formData.city} className={styles.inputField} onChange={e => setFormData({ ...formData, city: e.target.value })} style={showFieldErrors && !hasCity ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px rgba(239,68,68,0.12)' } : undefined} />
+                    <input type="text" placeholder="State" value={formData.state} className={styles.inputField} onChange={e => setFormData({ ...formData, state: e.target.value })} style={showFieldErrors && !hasState ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px rgba(239,68,68,0.12)' } : undefined} />
+                    <input type="text" placeholder="PIN Code" value={formData.pinCode} className={styles.inputField} onChange={e => setFormData({ ...formData, pinCode: e.target.value })} style={showFieldErrors && !hasPinCode ? { borderColor: '#ef4444', boxShadow: '0 0 0 2px rgba(239,68,68,0.12)' } : undefined} />
+                    {showFieldErrors && (!hasCustomerName || !isPhoneValid || !hasEmail || !hasStreet || !hasCity || !hasState || !hasPinCode) && (
+                      <div className={styles.fullWidth} style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 700 }}>
+                        Please fill all required fields correctly.
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
                     className={styles.payBtn}
                     onClick={() => {
+                      setShowFieldErrors(true);
+                      if (!hasCustomerName || !isPhoneValid || !hasEmail || !hasStreet || !hasCity || !hasState || !hasPinCode) {
+                        toast.error('Please fill all required fields correctly.');
+                        return;
+                      }
                       setCurrentStep(2);
                       scrollToPaymentMethodView();
                     }}
-                    disabled={!formData.customerName || !isPhoneValid || !formData.email || !formData.street || !formData.city || !formData.state || !formData.pinCode}
                   >
                     Continue to payment method <span style={{ fontSize: '1.2rem' }}>→</span>
                   </button>
@@ -454,8 +497,8 @@ export default function CheckoutPage() {
 
                   <div className={styles.stepActions}>
                     <button type="button" className={styles.secondaryBtn} onClick={() => setCurrentStep(1)}>Back</button>
-                    <button ref={payButtonRef} type="submit" className={styles.payBtn} disabled={loading || !hasSelectedOrderType} style={{ marginTop: 0 }}>
-                      {loading ? 'Processing Securely...' : <>{isCod ? 'Place order' : 'Pay'} <span style={{ fontSize: '1.2rem' }}>→</span></>}
+                    <button ref={payButtonRef} type="submit" className={styles.payBtn} disabled={loading} style={{ marginTop: 0 }}>
+                      {loading ? 'Processing Securely...' : <>{!hasSelectedOrderType || isCod ? 'Place order' : 'Pay'} <span style={{ fontSize: '1.2rem' }}>→</span></>}
                     </button>
                   </div>
                 </>

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { toast, Toaster } from 'sonner';
+import { Toaster } from 'sonner';
 import { type CartItem } from '@/lib/cart';
 import { useCart } from '@/hooks/useCart';
 import { upsertCartItem, updateCartItemQuantity } from '@/lib/cart-operations';
@@ -98,17 +98,11 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
     };
     updateCart(upsertCartItem(cart, cartItem));
 
-    const shortName = product.name.length > 25 ? product.name.slice(0, 25) + '...' : product.name;
-    const shortDisplayName = `${shortName} - ${variant.size}`;
-    toast.success(`${shortDisplayName} added to cart!`);
   };
 
   const updateQuantity = (cartId: string, delta: number) => {
     const existingItem = cart.find((item) => item._id === cartId);
     if (!existingItem) return;
-    if (existingItem.quantity + delta <= 0) {
-      toast.info(`Removed from cart`);
-    }
     updateCart(updateCartItemQuantity(cart, cartId, delta));
   };
 
@@ -176,10 +170,19 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
             align-items: center;
             margin-top: 10px;
           }
+          .variantRow {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+          }
           @media (max-width: 420px) {
             .responsiveGrid { gap: 0.55rem; }
             .productImageLink { height: 136px; }
             .productContent { padding: 0.55rem; }
+          }
+          @media (max-width: 768px) {
+            .variantRow { display: none; }
           }
           @media (min-width: 640px) {
             .responsiveGrid {
@@ -258,7 +261,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                         </div>
                       </Link>
 
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                      <div className="variantRow">
                         {allVariants.map((v, idx: number) => {
                           const isSelected = vi === idx;
                           return (
