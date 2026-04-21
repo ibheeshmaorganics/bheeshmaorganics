@@ -17,6 +17,14 @@ interface Product { _id: string; name: string; category: string; price: number; 
 export default function ClientProductGrid({ products: initialProducts }: { products: Product[] }) {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [isMobileGrid, setIsMobileGrid] = useState(false);
+
+  useEffect(() => {
+    const checkMobileGrid = () => setIsMobileGrid(window.innerWidth < 768);
+    checkMobileGrid();
+    window.addEventListener('resize', checkMobileGrid);
+    return () => window.removeEventListener('resize', checkMobileGrid);
+  }, []);
 
   useEffect(() => {
     // Aggressively pre-warm all product destination pages natively into background memory instantly 
@@ -214,7 +222,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
               <div className="productContent">
                 {(() => {
                   const allVariants = getAllVariants(p);
-                  const vi = selectedVariants[p._id] || 0;
+                  const vi = isMobileGrid ? 0 : (selectedVariants[p._id] || 0);
                   const currentBasePrice = allVariants[vi].price;
                   const currentFinalPrice = getVariantPrice(currentBasePrice, p.discount);
                   const activeCartId = `${p._id}-${allVariants[vi].size}`;
@@ -258,22 +266,24 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                         </div>
                       </Link>
 
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-                        {allVariants.map((v, idx: number) => {
-                          const isSelected = vi === idx;
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => setSelectedVariants(prev => ({ ...prev, [p._id]: idx }))}
-                              style={{
-                                padding: '4px 10px', fontSize: '0.85rem', fontWeight: 600, borderRadius: '4px', border: `1px solid ${isSelected ? 'var(--color-tertiary)' : '#e2e8f0'}`, background: isSelected ? 'var(--color-tertiary)' : 'white', color: isSelected ? 'white' : '#64748b', cursor: allVariants.length > 1 ? 'pointer' : 'default', transition: 'all 0.2s'
-                              }}
-                            >
-                              {v.size}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {isMobileGrid ? null : (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                          {allVariants.map((v, idx: number) => {
+                            const isSelected = vi === idx;
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => setSelectedVariants(prev => ({ ...prev, [p._id]: idx }))}
+                                style={{
+                                  padding: '4px 10px', fontSize: '0.85rem', fontWeight: 600, borderRadius: '4px', border: `1px solid ${isSelected ? 'var(--color-tertiary)' : '#e2e8f0'}`, background: isSelected ? 'var(--color-tertiary)' : 'white', color: isSelected ? 'white' : '#64748b', cursor: allVariants.length > 1 ? 'pointer' : 'default', transition: 'all 0.2s'
+                                }}
+                              >
+                                {v.size}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                         <div className="productActions">
                           <Link
                             href={`/products/${p._id}`}
