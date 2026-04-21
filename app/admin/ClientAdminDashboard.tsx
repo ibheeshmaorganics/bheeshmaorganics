@@ -934,30 +934,34 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
           Order Manifest
         </h4>
-        <div style={{ fontWeight: 800, fontSize: '1rem', color: '#10b981' }}>Total: ₹{editingOrder.totalAmount}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontWeight: 700, fontSize: '0.78rem', color: '#475569', background: '#f8fafc', padding: '5px 8px', borderRadius: '999px', border: '1px solid #e2e8f0' }}>
+            {editingOrder.products?.length || 0} item(s)
+          </div>
+          <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#0f766e' }}>
+            Subtotal: ₹{(editingOrder.products || []).reduce((sum: number, item: any) => sum + ((Number(item?.price) || 0) * (Number(item?.quantity) || 0)), 0)}
+          </div>
+        </div>
       </div>
-      
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '130px', overflowY: 'auto' }}>
-        {editingOrder.products?.map((item: any, i: number) => (
-          <li key={i} style={{ padding: '10px 12px', background: '#f8fafc', borderRadius: '4px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid #cbd5e1' }}>
-            <div style={{ fontWeight: 700, color: '#334155', fontSize: '0.8rem' }}>{item.productId?.name || 'Unknown Product'}</div>
-            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginTop: '4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Qty:</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b' }}>{item.quantity}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Unit Price:</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b' }}>₹{item.price}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginRight: '6px' }}>Subtotal:</span>
-                <span style={{ fontWeight: 900, color: '#10b981', fontSize: '0.95rem' }}>₹{item.price * item.quantity}</span>
-              </div>
+
+      <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.7fr 0.6fr 0.8fr 0.9fr', background: '#f1f5f9', padding: '8px 10px', fontSize: '0.72rem', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+          <span>Product</span>
+          <span style={{ textAlign: 'center' }}>Qty</span>
+          <span style={{ textAlign: 'right' }}>Unit</span>
+          <span style={{ textAlign: 'right' }}>Line Total</span>
+        </div>
+        <div>
+          {editingOrder.products?.map((item: any, i: number) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1.7fr 0.6fr 0.8fr 0.9fr', padding: '9px 10px', borderTop: i === 0 ? 'none' : '1px solid #f1f5f9', alignItems: 'center', fontSize: '0.8rem' }}>
+              <span style={{ fontWeight: 700, color: '#1e293b' }}>{item.productId?.name || 'Unknown Product'}</span>
+              <span style={{ textAlign: 'center', color: '#334155', fontWeight: 700 }}>{Number(item.quantity) || 0}</span>
+              <span style={{ textAlign: 'right', color: '#334155', fontWeight: 600 }}>₹{Number(item.price) || 0}</span>
+              <span style={{ textAlign: 'right', color: '#0f766e', fontWeight: 800 }}>₹{(Number(item.price) || 0) * (Number(item.quantity) || 0)}</span>
             </div>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1009,8 +1013,8 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#0f172a', borderTop: '1px dashed #cbd5e1', paddingTop: '6px', marginTop: '6px' }}>
-          <span style={{ fontWeight: 700 }}>{isCod ? 'Final COD Total' : 'Order Total'}</span>
-          <span style={{ fontWeight: 900 }}>₹{payableTotal}</span>
+          <span style={{ fontWeight: 700 }}>Final Order Total</span>
+          <span style={{ fontWeight: 900, color: '#15803d' }}>₹{payableTotal}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#334155', marginTop: '5px' }}>
           <span>Pay now</span>

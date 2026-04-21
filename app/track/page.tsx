@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import styles from './page.module.css';
 
-interface Order { _id: string; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; refundStatus?: string; refundFailureReason?: string; refundInitiatedAt?: string; refundCompletedAt?: string; refundTimeline?: any[]; address: any; products: any[]; }
+interface Order { _id: string; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; refundStatus?: string; refundFailureReason?: string; refundInitiatedAt?: string; refundCompletedAt?: string; refundTimeline?: any[]; transactionSummary?: any; address: any; products: any[]; }
 
 function OrderTrackingTimeline({ status, isFailed }: { status: string, isFailed: boolean }) {
   if (isFailed) return null; // Don't show happy path timeline for failed orders
@@ -58,6 +58,7 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
   const paymentStatusLower = (order.paymentStatus || '').toLowerCase();
   const isCodOrder = paymentMethodLower === 'cash' || paymentMethodLower === 'cod' || paymentStatusLower.includes('cod');
   const isPartialOrder = paymentMethodLower === 'partial';
+  const codConvenienceFee = Number(order.transactionSummary?.codConvenienceFee || 0);
 
   const isFailed = order.status === 'CANCELLED' || order.status === 'RTO' || order.paymentStatus === 'payment failed';
   const isTransit = ['SHIPPED', 'IN_TRANSIT', 'READY_TO_SHIP'].includes(order.status);
@@ -237,13 +238,23 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
               <div style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>
                 {isCodOrder ? 'Cash on Delivery' : isPartialOrder ? 'Partial Payment' : order.paymentStatus === 'paid' ? 'Online - Paid' : order.paymentStatus === 'refunded' ? 'Refunded' : order.paymentStatus === 'payment failed' ? <span style={{ color: '#dc2626' }}>Failed</span> : 'Pending'}
               </div>
-              
-              {isPartialOrder && order.totalAmount > 99 && (
-                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-                  <div style={{ color: '#059669', fontSize: '0.75rem', fontWeight: 600 }}>Partially Paid ₹99</div>
-                  <div style={{ color: '#dc2626', fontSize: '0.85rem', fontWeight: 800 }}>Balance on delivery ₹{Math.max(0, order.totalAmount - 99)}</div>
+
+              <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
+                <div style={{ color: '#0f172a', fontSize: '0.78rem', fontWeight: 700 }}>
+                  Total <span style={{ color: '#2563eb', fontWeight: 800 }}>₹{order.totalAmount}</span>
                 </div>
-              )}
+                {isPartialOrder ? (
+                  <>
+                    <div style={{ color: '#059669', fontSize: '0.75rem', fontWeight: 700, marginTop: '4px' }}>Partially Paid ₹99</div>
+                    <div style={{ color: '#dc2626', fontSize: '0.82rem', fontWeight: 800 }}>Balance on delivery ₹{Math.max(0, order.totalAmount - 99)}</div>
+                  </>
+                ) : null}
+                {isCodOrder && codConvenienceFee > 0 && (
+                  <div style={{ color: '#b45309', fontSize: '0.75rem', fontWeight: 700, marginTop: '4px' }}>
+                    Includes COD convenience fee ₹{codConvenienceFee}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
