@@ -37,8 +37,9 @@ function toVariantList(variants: Prisma.JsonValue | null): Array<{ size: string;
     .map((variant) => {
       if (!variant || typeof variant !== 'object') return null;
       const maybeSize = 'size' in variant ? variant.size : null;
-      const maybePrice = 'price' in variant ? variant.price : null;
-      if (typeof maybeSize !== 'string' || typeof maybePrice !== 'number') return null;
+      const maybePriceRaw = 'price' in variant ? variant.price : null;
+      const maybePrice = typeof maybePriceRaw === 'number' ? maybePriceRaw : Number(maybePriceRaw);
+      if (typeof maybeSize !== 'string' || !Number.isFinite(maybePrice)) return null;
       return { size: maybeSize, price: maybePrice };
     })
     .filter((variant): variant is { size: string; price: number } => variant !== null);
@@ -156,6 +157,22 @@ export async function POST(req: NextRequest) {
     const { products: sanitizedProducts, subtotalAmount } = await buildSanitizedOrderProducts(body.products);
     const onlineDiscountAmount = calculateOnlineDiscount(subtotalAmount, paymentMethod);
     const totalAmount = calculatePayableTotal(subtotalAmount, paymentMethod);
+    const codConvenienceFee = paymentMethod === 'Cash' ? 50 : 0;
+    const payNowAmount = paymentMethod === 'Razorpay'
+      ? totalAmount
+      : paymentMethod === 'Partial'
+        ? Math.min(99, totalAmount)
+        : 0;
+    const payLaterAmount = Math.max(0, totalAmount - payNowAmount);
+    const transactionSummary = {
+      subtotalAmount,
+      onlineDiscountAmount,
+      codConvenienceFee,
+      payableAmount: totalAmount,
+      payNowAmount,
+      payLaterAmount,
+      orderType: paymentMethod === 'Razorpay' ? 'PAY_FULL' : paymentMethod === 'Partial' ? 'PARTIAL' : 'COD',
+    };
 
     const orderData = {
       customerName: body.customerName,
@@ -164,12 +181,29 @@ export async function POST(req: NextRequest) {
       address: body.address,
       products: sanitizedProducts,
       totalAmount,
-      status: 'Pending',
+      status: paymentMethod === 'Cash' ? 'NEW' : 'DRAFT',
       paymentMethod,
       paymentStatus: paymentMethod === 'Cash' ? 'cod' : 'draft_intent',
+      transactionSummary,
     };
 
-    const order = await prisma.order.create({ data: orderData });
+    let order;
+    try {
+      order = await prisma.order.create({ data: orderData });
+    } catch (createErr: unknown) {
+      const createMessage = createErr instanceof Error ? createErr.message : String(createErr);
+      const missingTransactionSummaryColumn =
+        createMessage.includes('Unknown argument `transactionSummary`') ||
+        createMessage.includes('Unknown arg `transactionSummary`');
+
+      if (!missingTransactionSummaryColumn) {
+        throw createErr;
+      }
+
+      // Backward-compatible fallback when runtime Prisma client/schema isn't synced yet.
+      const { transactionSummary: _ignored, ...orderDataWithoutSummary } = orderData;
+      order = await prisma.order.create({ data: orderDataWithoutSummary });
+    }
     if (paymentMethod === 'Razorpay' || paymentMethod === 'Partial') {
       try {
         if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -194,6 +228,38 @@ export async function POST(req: NextRequest) {
 
         if (!rzpOrder || !rzpOrder.id) {
           throw new Error("Failed to create Razorpay Order at Gateway");
+        }
+
+        try {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              razorpayOrderId: rzpOrder.id,
+              paymentMeta: {
+                provider: 'razorpay',
+                mode: paymentMethod === 'Partial' ? 'partial' : 'full',
+                intent: {
+                  orderId: rzpOrder.id,
+                  amount: Number(options.amount) / 100,
+                  amountPaise: options.amount,
+                  currency: options.currency,
+                  receipt: options.receipt,
+                  createdAt: new Date().toISOString(),
+                }
+              }
+            } as any
+          });
+        } catch (persistErr: unknown) {
+          const persistMessage = persistErr instanceof Error ? persistErr.message : String(persistErr);
+          const missingPaymentColumns =
+            persistMessage.includes('Unknown argument `razorpayOrderId`') ||
+            persistMessage.includes('Unknown arg `razorpayOrderId`') ||
+            persistMessage.includes('Unknown argument `paymentMeta`') ||
+            persistMessage.includes('Unknown arg `paymentMeta`');
+          if (!missingPaymentColumns) {
+            throw persistErr;
+          }
+          // Backward-compatible runtime when new schema fields are not yet pushed.
         }
 
         return NextResponse.json({

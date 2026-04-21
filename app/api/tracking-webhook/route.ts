@@ -52,10 +52,55 @@ export async function POST(req: NextRequest) {
     }
 
     // Match dynamically via AWB if tracking hook, or Shiprocket shipment_id if order hook
-    await prisma.order.updateMany({
-      where: awb ? { awbCode: awb } : { shiprocketOrderId: shipmentId },
-      data: { status: internalStatus }
+    const matchWhere = awb ? { awbCode: awb } : { shiprocketOrderId: shipmentId };
+    const matchedOrders = await prisma.order.findMany({
+      where: matchWhere,
+      select: { id: true, status: true, shipmentMeta: true }
     });
+
+    for (const order of matchedOrders) {
+      const existingMeta = order.shipmentMeta && typeof order.shipmentMeta === 'object' && !Array.isArray(order.shipmentMeta)
+        ? (order.shipmentMeta as Record<string, unknown>)
+        : {};
+      const existingEvents = Array.isArray(existingMeta.events) ? existingMeta.events : [];
+      const eventEntry = {
+        source: 'shiprocket_webhook',
+        receivedAt: new Date().toISOString(),
+        previousStatus: order.status,
+        normalizedStatus: internalStatus,
+        rawStatus: current_status,
+        awb: awb || null,
+        shipmentId: shipmentId || null,
+        payload,
+      };
+
+      try {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: internalStatus,
+            shipmentMeta: {
+              ...existingMeta,
+              lastWebhookStatus: String(current_status),
+              lastWebhookReceivedAt: new Date().toISOString(),
+              events: [...existingEvents, eventEntry].slice(-30),
+            }
+          }
+        });
+      } catch (persistErr: unknown) {
+        const persistMessage = persistErr instanceof Error ? persistErr.message : String(persistErr);
+        const missingShipmentMetaColumn =
+          persistMessage.includes('Unknown argument `shipmentMeta`') ||
+          persistMessage.includes('Unknown arg `shipmentMeta`');
+        if (!missingShipmentMetaColumn) {
+          throw persistErr;
+        }
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: internalStatus }
+        });
+      }
+    }
 
     console.log(`[EXTERNAL WEBHOOK] Successfully Synced to DB Status: ${internalStatus}`);
     return NextResponse.json({ success: true, message: 'AWB Synced' });

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       await prisma.order.update({
         where: { id: orderId },
         data: { 
-          status: 'Pending', 
+          status: 'NEW', 
           paymentStatus: isPartial ? 'partial (Advance Paid)' : 'paid',
           paymentId: razorpay_payment_id
         } // Preserve in Pending/NEW tab natively

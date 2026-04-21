@@ -1,9 +1,35 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
+let shiprocketTokenCache: { token: string; expiresAt: number } | null = null;
+
+async function getShiprocketToken(email: string, password: string): Promise<string> {
+  const now = Date.now();
+  if (shiprocketTokenCache && shiprocketTokenCache.expiresAt > now) {
+    return shiprocketTokenCache.token;
+  }
+
+  const authRes = await fetch('https://apiv2.shiprocket.in/v1/external/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const authData = await authRes.json();
+  if (!authRes.ok || !authData.token) {
+    throw new Error(`Shiprocket Auth Failed: ${authData.message || 'Invalid Email/Password configuration'}`);
+  }
+
+  // Keep a safety buffer so we refresh before token expiry.
+  shiprocketTokenCache = {
+    token: authData.token,
+    expiresAt: now + (9 * 60 * 1000)
+  };
+  return authData.token;
+}
+
 export async function POST(req: Request) {
   try {
-    const { orderIds, dimensions, pickupDate, courierId } = await req.json();
+    const { orderIds, dimensions, pickupDate, courierId, selectedCourier } = await req.json();
 
     if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
       return NextResponse.json({ error: 'No orders provided' }, { status: 400 });
@@ -16,20 +42,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Shiprocket credentials missing from server environment (.env feels empty)' }, { status: 500 });
     }
 
-    // 1. Authenticate with Shiprocket automatically
-    const authRes = await fetch('https://apiv2.shiprocket.in/v1/external/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const authData = await authRes.json();
-    if (!authRes.ok || !authData.token) {
-      throw new Error(`Shiprocket Auth Failed: ${authData.message || 'Invalid Email/Password configuration'}`);
-    }
-    const token = authData.token;
+    // 1. Reuse cached token when available.
+    const token = await getShiprocketToken(email, password);
 
     const generatedAWBs = [];
     const failedAWBs = [];
+    const pickupJobs: Promise<void>[] = [];
 
     // 2. Loop through and dispatch each selected Admin order
     for (const id of orderIds) {
@@ -139,19 +157,6 @@ export async function POST(req: Request) {
       }
 
       try {
-        // Schedule Pickup
-        const chosenDate = pickupDate ? new Date(pickupDate) : new Date();
-        const dateString = chosenDate.toISOString().split('T')[0];
-
-        await fetch('https://apiv2.shiprocket.in/v1/external/courier/generate/pickup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({
-            shipment_id: [shipmentId],
-            pickup_date: typeof dateString === 'string' ? [dateString] : []
-          })
-        }).catch(() => { });
-
         // 5. Real-time Native Database Sync
         await prisma.order.update({
           where: { id: id },
@@ -160,10 +165,72 @@ export async function POST(req: Request) {
             awbCode: srAwb,
             courierName: srCourier,
             trackingLink: trackingLink,
-            shiprocketOrderId: shipmentId.toString()
+            shiprocketOrderId: shipmentId.toString(),
+            shipmentMeta: {
+              dimensions: {
+                length: Number(dimensions?.length) || null,
+                width: Number(dimensions?.width) || null,
+                height: Number(dimensions?.height) || null,
+                weight: Number(dimensions?.weight) || null,
+              },
+              pickupDate: pickupDate || null,
+              selectedCourier: selectedCourier || (courierId ? { id: Number(courierId) } : null),
+              awb: srAwb,
+              assignedCourierName: srCourier,
+              trackingLink,
+              shiprocketShipmentId: shipmentId.toString(),
+              updatedAt: new Date().toISOString(),
+            }
           }
         });
         generatedAWBs.push({ orderId: id, awb: srAwb, courier: srCourier, link: trackingLink, srShipmentId: shipmentId });
+
+        // Schedule pickup asynchronously; do not block AWB response.
+        const chosenDate = pickupDate ? new Date(pickupDate) : new Date();
+        const dateString = chosenDate.toISOString().split('T')[0];
+        const pickupJob = fetch('https://apiv2.shiprocket.in/v1/external/courier/generate/pickup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            shipment_id: [shipmentId],
+            pickup_date: typeof dateString === 'string' ? [dateString] : []
+          })
+        })
+          .then(async (pickupRes) => {
+            const pickupData = await pickupRes.json().catch(() => null);
+            await prisma.order.update({
+              where: { id },
+              data: {
+                shipmentMeta: {
+                  dimensions: {
+                    length: Number(dimensions?.length) || null,
+                    width: Number(dimensions?.width) || null,
+                    height: Number(dimensions?.height) || null,
+                    weight: Number(dimensions?.weight) || null,
+                  },
+                  pickupDate: pickupDate || null,
+                  selectedCourier: selectedCourier || (courierId ? { id: Number(courierId) } : null),
+                  awb: srAwb,
+                  assignedCourierName: srCourier,
+                  trackingLink,
+                  shiprocketShipmentId: shipmentId.toString(),
+                  pickup: {
+                    requested: true,
+                    success: pickupRes.ok,
+                    statusCode: pickupRes.status,
+                    response: pickupData,
+                  },
+                  updatedAt: new Date().toISOString(),
+                }
+              }
+            }).catch((persistErr) => {
+              console.error(`Failed to persist pickup metadata for ${id}:`, persistErr);
+            });
+          })
+          .catch((pickupErr) => {
+            console.error(`Pickup scheduling failed for shipment ${shipmentId}:`, pickupErr);
+          });
+        pickupJobs.push(pickupJob);
       } catch (dbErr) {
         console.error('Database Sync Post-Shipment failed:', dbErr);
       }
@@ -173,7 +240,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: failedAWBs[0].reason }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, processed: generatedAWBs.length, details: generatedAWBs, failures: failedAWBs });
+    // Fire-and-forget completion logging for async pickup calls.
+    void Promise.allSettled(pickupJobs).then((results) => {
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+      if (failedCount > 0) {
+        console.error(`Pickup scheduling failed for ${failedCount} shipment(s).`);
+      }
+    });
+
+    return NextResponse.json({ success: true, processed: generatedAWBs.length, details: generatedAWBs, failures: failedAWBs, pickupScheduledAsync: true });
 
   } catch (error: any) {
     console.error('Core Shiprocket API Route Error:', error);

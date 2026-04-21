@@ -172,11 +172,29 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                   const currentBasePrice = allVariants[vi].price;
                   const currentFinalPrice = getVariantPrice(currentBasePrice, p.discount);
                   const activeCartId = `${p._id}-${allVariants[vi].size}`;
+                  const actionControlHeight = '44px';
 
                   return (
                     <>
                       <Link href={`/products/${p._id}`} prefetch={true} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', width: '100%', marginBottom: '10px' }}>
-                        <h3 style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)', fontWeight: 700, color: 'var(--color-text)', textTransform: 'capitalize', margin: 0, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{p.name}</h3>
+                        <h3
+                          style={{
+                            fontSize: 'clamp(0.9rem, 2.5vw, 1.15rem)',
+                            fontWeight: 700,
+                            color: 'var(--color-text)',
+                            textTransform: 'capitalize',
+                            margin: 0,
+                            width: '100%',
+                            lineHeight: 1.35,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
+                          {p.name}
+                        </h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flexShrink: 0, width: '100%' }}>
                           {p.discount && p.discount > 0 ? (
@@ -215,7 +233,24 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                             href={`/products/${p._id}`}
                             prefetch={true}
                             style={{
-                              flex: 1, background: 'transparent', color: 'var(--color-primary)', border: '2px solid var(--color-primary)', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: '30px', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'normal', lineHeight: 1.2, textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              flex: 1,
+                              height: actionControlHeight,
+                              background: 'transparent',
+                              color: 'var(--color-primary)',
+                              border: '2px solid var(--color-primary)',
+                              padding: '0',
+                              borderRadius: '30px',
+                              fontWeight: 700,
+                              fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              whiteSpace: 'normal',
+                              lineHeight: 1.2,
+                              textDecoration: 'none',
+                              textAlign: 'center',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
                             }}
                             onMouseOver={(e) => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; }}
                             onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-primary)'; }}
@@ -223,7 +258,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                             View More
                           </Link>
 
-                          <div style={{ flex: 1.15, display: 'flex' }}>
+                          <div style={{ flex: 1.3, display: 'flex' }}>
                             {(() => {
                               const cartItem = cart.find(c => c._id === activeCartId);
                               if (cartItem) {
@@ -232,9 +267,9 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                                     quantity={cartItem.quantity}
                                     onDecrement={() => updateQuantity(activeCartId, -1)}
                                     onIncrement={() => updateQuantity(activeCartId, 1)}
-                                    containerStyle={{ display: 'flex', alignItems: 'stretch', background: '#f1f5f9', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '2px solid #e2e8f0', width: '100%', justifyContent: 'space-between' }}
-                                    decrementButtonStyle={{ padding: 'clamp(0.3rem, 1.5vw, 0.65rem) clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}
-                                    incrementButtonStyle={{ padding: 'clamp(0.3rem, 1.5vw, 0.65rem) clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-tertiary)', color: 'white', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none' }}
+                                    containerStyle={{ display: 'flex', alignItems: 'stretch', background: '#f1f5f9', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '2px solid #e2e8f0', width: '100%', justifyContent: 'space-between', height: actionControlHeight }}
+                                    decrementButtonStyle={{ padding: '0 clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none', height: '100%' }}
+                                    incrementButtonStyle={{ padding: '0 clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-tertiary)', color: 'white', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none', height: '100%' }}
                                     quantityStyle={{ fontWeight: 800, color: '#0f172a', textAlign: 'center', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)' }}
                                   />
                                 );
@@ -243,8 +278,8 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                                 <AddToCartButton
                                   inStock={p.inStock !== false}
                                   onAdd={() => handleAddToCart(p, vi)}
-                                  style={{ width: '100%', background: 'var(--color-tertiary)', color: 'white', border: '2px solid var(--color-tertiary)', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'normal', lineHeight: 1.2 }}
-                                  outOfStockStyle={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '2px solid #e2e8f0', boxShadow: 'none', width: '100%', padding: 'clamp(0.3rem, 1.5vw, 0.65rem) 0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', whiteSpace: 'normal', lineHeight: 1.2 }}
+                                  style={{ width: '100%', height: actionControlHeight, background: 'var(--color-tertiary)', color: 'white', border: '2px solid var(--color-tertiary)', padding: '0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'normal', lineHeight: 1.2 }}
+                                  outOfStockStyle={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '2px solid #e2e8f0', boxShadow: 'none', width: '100%', height: actionControlHeight, padding: '0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', whiteSpace: 'normal', lineHeight: 1.2 }}
                                 />
                               );
                             })()}

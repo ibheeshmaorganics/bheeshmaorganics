@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       const updated = await prisma.order.updateMany({
         where: { id: dbOrderId },
         data: {
-          status: 'Pending',
+          status: 'NEW',
           paymentStatus: 'paid',
           ...(paymentId && { paymentId }),
         },
@@ -66,11 +66,19 @@ export async function POST(req: NextRequest) {
         const dbOrderId = rzpOrder.receipt;
         
         if (dbOrderId) {
-          await prisma.order.update({
-             where: { id: dbOrderId },
-             data: { paymentStatus: 'payment failed', status: 'CANCELLED' }
-          });
-          console.log(`[WEBHOOK] Order ${dbOrderId} marked as Payment Failed`);
+          const dbOrder = await prisma.order.findUnique({ where: { id: dbOrderId } });
+          const method = (dbOrder?.paymentMethod || '').toLowerCase();
+          const isCod = method === 'cash' || method === 'cod';
+
+          if (dbOrder && !isCod) {
+            await prisma.order.update({
+               where: { id: dbOrderId },
+               data: { paymentStatus: 'payment failed', status: 'FAILED' }
+            });
+            console.log(`[WEBHOOK] Order ${dbOrderId} marked as Payment Failed`);
+          } else if (dbOrder && isCod) {
+            console.warn(`[WEBHOOK] Ignored payment.failed for COD order ${dbOrderId}`);
+          }
         }
       } catch (err: unknown) {
          const webhookErr = err instanceof Error ? err.message : String(err);
@@ -86,7 +94,13 @@ export async function POST(req: NextRequest) {
       if (paymentId && refundId) {
         await prisma.order.updateMany({
           where: { paymentId: paymentId },
-          data: { paymentStatus: 'refunded' }
+          data: {
+            paymentStatus: 'refunded',
+            refundStatus: 'processed',
+            refundId,
+            refundFailureReason: null,
+            refundCompletedAt: new Date(),
+          }
         });
         console.log(`[WEBHOOK] Refund ${refundId} marked as successfully Refunded (Completed) for Payment ${paymentId}`);
       }
@@ -95,11 +109,20 @@ export async function POST(req: NextRequest) {
     if (event.event === 'refund.failed') {
       const refundId = event.payload.refund.entity.id;
       const paymentId = event.payload.refund.entity.payment_id;
+      const failureReason =
+        event.payload.refund.entity.error_description ||
+        event.payload.refund.entity.status_details?.reason ||
+        'Gateway reported refund failure';
 
       if (paymentId) {
         await prisma.order.updateMany({
           where: { paymentId: paymentId },
-          data: { paymentStatus: 'refund failed' }
+          data: {
+            paymentStatus: 'refund failed',
+            refundStatus: 'failed',
+            refundId: refundId || undefined,
+            refundFailureReason: String(failureReason),
+          }
         });
         console.error(`[WEBHOOK] BANK REFUND FAILED for ${refundId}. Please check Razorpay Dashboard.`);
       }

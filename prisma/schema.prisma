@@ -37,8 +37,9 @@ model Order {
   address           Json
   products          Json
   totalAmount       Float
-  status            String   @default("Pending")
+  status            String   @default("NEW")
   paymentId         String?
+  razorpayOrderId   String?
   shiprocketOrderId String?
   awbCode           String?
   createdAt         DateTime @default(now())
@@ -46,12 +47,15 @@ model Order {
   courierName       String?
   trackingLink      String?
   paymentStatus     String   @default("payment processing/pending")
+  paymentMeta       Json?
+  transactionSummary Json?
   refundId          String?
   refundStatus      String?
   refundFailureReason String?
   refundInitiatedAt DateTime?
   refundCompletedAt DateTime?
   refundTimeline    Json?
+  shipmentMeta      Json?
 }
 
 model Visitor {

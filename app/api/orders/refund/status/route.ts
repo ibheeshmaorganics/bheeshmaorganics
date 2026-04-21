@@ -129,12 +129,14 @@ export async function GET(req: NextRequest) {
             : latestStatus === 'failed'
               ? 'refund failed'
               : 'refund initiated';
+        const latestRefundId = String(latestRefund.id || dbOrder.refundId || '');
 
         await prisma.order.update({
           where: { id: orderId },
           data: {
             paymentStatus: nextPaymentStatus,
             refundStatus: latestStatus,
+            refundId: latestRefundId || dbOrder.refundId,
             refundFailureReason: latestStatus === 'failed' ? failureReason || 'Unknown gateway rejection.' : null,
             refundCompletedAt: latestStatus === 'processed' ? new Date() : dbOrder.refundCompletedAt,
             refundTimeline: shouldAppendTimeline ? [...existingTimeline, timelineEvent] : existingTimeline,

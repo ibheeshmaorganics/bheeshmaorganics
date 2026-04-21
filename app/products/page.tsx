@@ -12,8 +12,9 @@ function normalizeVariants(variants: Prisma.JsonValue | null): VariantOption[] {
     .map((variant) => {
       if (!variant || typeof variant !== 'object') return null;
       const maybeSize = 'size' in variant ? variant.size : null;
-      const maybePrice = 'price' in variant ? variant.price : null;
-      if (typeof maybeSize !== 'string' || typeof maybePrice !== 'number') return null;
+      const maybePriceRaw = 'price' in variant ? variant.price : null;
+      const maybePrice = typeof maybePriceRaw === 'number' ? maybePriceRaw : Number(maybePriceRaw);
+      if (typeof maybeSize !== 'string' || !Number.isFinite(maybePrice)) return null;
       return { size: maybeSize, price: maybePrice };
     })
     .filter((variant): variant is VariantOption => variant !== null);

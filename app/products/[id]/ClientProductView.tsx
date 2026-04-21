@@ -46,6 +46,7 @@ const styles: Record<string, string> = {
 type ProductDetails = {
   _id: string;
   name: string;
+  subHeading?: string;
   price: number;
   discount?: number;
   images?: string[];
@@ -515,6 +516,11 @@ export default function ClientProductView({ product }: { product: ProductDetails
           <div>
             <div className={styles.badge}>100% Organic</div>
             <h1 className={styles.title} style={{ wordWrap: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}>{product.name}</h1>
+            {product.subHeading && (
+              <p style={{ marginTop: '8px', color: '#475569', fontSize: '1rem', fontWeight: 500, lineHeight: 1.5 }}>
+                {product.subHeading}
+              </p>
+            )}
           </div>
 
           <div className={styles.variantsSection}>

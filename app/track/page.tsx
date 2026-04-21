@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import styles from './page.module.css';
 
-interface Order { _id: string; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; address: any; products: any[]; }
+interface Order { _id: string; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; refundStatus?: string; refundFailureReason?: string; refundInitiatedAt?: string; refundCompletedAt?: string; refundTimeline?: any[]; address: any; products: any[]; }
 
 function OrderTrackingTimeline({ status, isFailed }: { status: string, isFailed: boolean }) {
   if (isFailed) return null; // Don't show happy path timeline for failed orders
@@ -54,25 +54,14 @@ function OrderTrackingTimeline({ status, isFailed }: { status: string, isFailed:
 
 function OrderItem({ order, idx }: { order: Order; idx: number }) {
   const [expanded, setExpanded] = useState(false);
-  const [liveRefunds, setLiveRefunds] = useState<any[]>([]);
-  const [isFetchingLiveRefunds, setIsFetchingLiveRefunds] = useState(false);
+  const paymentMethodLower = (order.paymentMethod || '').toLowerCase();
+  const paymentStatusLower = (order.paymentStatus || '').toLowerCase();
+  const isCodOrder = paymentMethodLower === 'cash' || paymentMethodLower === 'cod' || paymentStatusLower.includes('cod');
+  const isPartialOrder = paymentMethodLower === 'partial';
 
   const isFailed = order.status === 'CANCELLED' || order.status === 'RTO' || order.paymentStatus === 'payment failed';
   const isTransit = ['SHIPPED', 'IN_TRANSIT', 'READY_TO_SHIP'].includes(order.status);
   const isSuccess = order.status === 'DELIVERED';
-
-  useEffect(() => {
-    if (expanded && (order.paymentId || order.refundId) && ['refund initiated', 'refunded', 'refund failed'].includes(order.paymentStatus?.toLowerCase() || '')) {
-      setIsFetchingLiveRefunds(true);
-      const query = order.paymentId ? `paymentId=${order.paymentId}` : `refundId=${order.refundId}`;
-      fetch(`/api/orders/refund/status?${query}`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.success) setLiveRefunds(d.refunds || []);
-        })
-        .finally(() => setIsFetchingLiveRefunds(false));
-    }
-  }, [expanded, order.paymentId, order.refundId, order.paymentStatus]);
 
   const s = order.status?.toUpperCase() || '';
   let statusText = 'Processing';
@@ -93,6 +82,43 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
   const mainProduct = order.products && order.products[0];
   const moreItems = order.products ? order.products.length - 1 : 0;
   const itemName = mainProduct ? `${mainProduct.productId?.name || 'Product'} ${moreItems > 0 ? `+${moreItems}` : ''}` : `Order #${order._id.slice(-6).toUpperCase()}`;
+  const addr = (order.address && typeof order.address === 'object') ? order.address : {};
+  const addressLine1 = String(addr.street || addr.line1 || addr.address || addr.village || '').trim();
+  const addressLine2 = [addr.area, addr.landmark].filter(Boolean).join(', ');
+  const cityStatePin = [addr.city, addr.state, addr.pinCode || addr.pincode || addr.zip].filter(Boolean).join(' - ').replace(' - ', ', ');
+  const fallbackAddress = Object.values(addr).filter(v => typeof v === 'string' && v.trim() !== '').join(', ');
+  const shippingAddressText = [addressLine1, addressLine2, cityStatePin].filter(Boolean).join(', ') || fallbackAddress || 'Address not available';
+  const dbRefundEvents = (Array.isArray(order.refundTimeline) ? order.refundTimeline : [])
+    .filter((event: any) => event && typeof event === 'object')
+    .slice()
+    .sort((a: any, b: any) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime());
+  const customerRefundEvents = dbRefundEvents
+    .filter((event: any) => ['gateway_refund_created', 'gateway_processed', 'gateway_failed'].includes(String(event.stage || '')))
+    .map((event: any) => {
+      const stage = String(event.stage || '');
+      const label =
+        stage === 'gateway_refund_created'
+          ? 'Refund initiated'
+          : stage === 'gateway_processed'
+            ? 'Refund completed'
+            : 'Refund failed';
+      const note =
+        stage === 'gateway_refund_created'
+          ? 'Your refund request is accepted and sent to bank.'
+          : stage === 'gateway_processed'
+            ? 'Refund is processed successfully.'
+            : 'Bank/gateway rejected this refund. Support team will retry.';
+      return {
+        label,
+        timestamp: event.timestamp,
+        amount: typeof event.amount === 'number' ? event.amount : null,
+        referenceNumber: String(event.refundId || order.refundId || '').trim(),
+        note: event.note && stage === 'gateway_failed' ? String(event.note) : note,
+      };
+    });
+  const latestCustomerRefundEvent = customerRefundEvents.length > 0
+    ? customerRefundEvents[customerRefundEvents.length - 1]
+    : null;
 
   return (
     <motion.div
@@ -196,104 +222,121 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
-            <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 260px', minWidth: 0 }}>
               <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>Shipping To</span>
-              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: '1.4' }}>
+              <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: '1.5', wordBreak: 'break-word' }}>
                 <strong>{order.customerName}</strong><br />
-                {order.address?.street}, {order.address?.city}<br />
-                {order.address?.state} - {order.address?.pinCode}<br />
-                {order.phone}
+                {shippingAddressText}<br />
+                <strong>Mobile:</strong> {order.phone || 'N/A'}<br />
+                <strong>Email:</strong> {order.email || 'N/A'}
               </div>
             </div>
-            <div style={{ flex: 1, background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
+            <div style={{ flex: '1 1 220px', minWidth: 0, background: '#f8fafc', padding: '10px', borderRadius: '8px' }}>
               <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px', marginBottom: '4px', display: 'block' }}>Payment</span>
               <div style={{ fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>
-                {order.paymentStatus?.toLowerCase().includes('cod') ? 'Cash on Delivery' : order.paymentStatus === 'paid' ? 'Online - Paid' : order.paymentStatus === 'refunded' ? 'Refunded' : order.paymentStatus === 'payment failed' ? <span style={{ color: '#dc2626' }}>Failed</span> : 'Pending'}
+                {isCodOrder ? 'Cash on Delivery' : isPartialOrder ? 'Partial Payment' : order.paymentStatus === 'paid' ? 'Online - Paid' : order.paymentStatus === 'refunded' ? 'Refunded' : order.paymentStatus === 'payment failed' ? <span style={{ color: '#dc2626' }}>Failed</span> : 'Pending'}
               </div>
               
-              {order.paymentStatus?.toLowerCase().includes('cod') && order.totalAmount > 99 && (
+              {isPartialOrder && order.totalAmount > 99 && (
                 <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-                  <div style={{ color: '#059669', fontSize: '0.75rem', fontWeight: 600 }}>Advance ₹99 Paid</div>
-                  <div style={{ color: '#dc2626', fontSize: '0.85rem', fontWeight: 800 }}>Due ₹{order.totalAmount - 99}</div>
+                  <div style={{ color: '#059669', fontSize: '0.75rem', fontWeight: 600 }}>Partially Paid ₹99</div>
+                  <div style={{ color: '#dc2626', fontSize: '0.85rem', fontWeight: 800 }}>Balance on delivery ₹{Math.max(0, order.totalAmount - 99)}</div>
                 </div>
               )}
             </div>
           </div>
 
-          {(order.status === 'CANCELLED' || order.status === 'RTO' || order.paymentStatus === 'payment failed') && (
-            <div style={{ background: '#fef2f2', padding: '12px', borderRadius: '8px', border: '1px solid #fee2e2' }}>
-               <h4 style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: '#b91c1c', textTransform: 'uppercase', fontWeight: 800 }}>Information</h4>
-               {order.paymentStatus === 'payment failed' ? (
-                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#991b1b' }}>Payment Failed. If money was deducted, it will be refunded within 7 to 10 working days.</p>
-               ) : (
-                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#991b1b' }}>
-                   {(order.paymentMethod === 'Cash' || order.paymentStatus?.toLowerCase().includes('cod')) 
-                     ? 'COD Advance ₹99 is non-refundable.' 
-                     : order.status === 'RTO' ? `Refund of ₹${order.totalAmount - 99} applicable.` : `Refund of ₹${order.totalAmount} applicable.` }
-                 </p>
-               )}
-            </div>
-          )}
+          {(() => {
+            let title = 'Information';
+            let message = 'Your order is being processed. We will update status as it moves to shipping.';
+            let bg = '#eff6ff';
+            let border = '#bfdbfe';
+            let color = '#1d4ed8';
 
-          {/* Real-time Customer Refund Timeline */}
-          {liveRefunds.length > 0 && (
+            if (order.paymentStatus === 'payment failed') {
+              title = 'Payment Failed';
+              message = 'Your payment did not go through. If any amount was deducted, it is usually reversed by bank in 7 to 10 working days.';
+              bg = '#fef2f2';
+              border = '#fecaca';
+              color = '#991b1b';
+            } else if (order.status === 'FAILED') {
+              title = 'Order Not Confirmed';
+              message = 'This order could not be confirmed because payment was not successful. Fulfillment was not started.';
+              bg = '#fef2f2';
+              border = '#fecaca';
+              color = '#991b1b';
+            } else if (order.status === 'CANCELLED') {
+              title = 'Order Cancelled';
+              if (isPartialOrder) {
+                message = 'This order was cancelled. Partial payment refund is applicable and will be processed to original payment source.';
+              } else if (isCodOrder) {
+                message = 'This COD order was cancelled before delivery. No payment was collected, so no refund is required.';
+              } else {
+                message = `This prepaid order was cancelled. Refund of ₹${order.totalAmount} is applicable.`;
+              }
+              bg = '#fef2f2';
+              border = '#fecaca';
+              color = '#991b1b';
+            } else if (order.status === 'RTO') {
+              title = 'Order Returned (RTO)';
+              if (isPartialOrder) {
+                message = 'This partial-payment order returned to origin. Partial payment refund is applicable as per policy.';
+              } else if (isCodOrder) {
+                message = 'This COD order returned to origin. Since payment is collected at delivery, no refund is required.';
+              } else {
+                message = `This prepaid order returned to origin. Refund of ₹${Math.max(0, order.totalAmount - 99)} is applicable as per policy.`;
+              }
+              bg = '#fff7ed';
+              border = '#fed7aa';
+              color = '#9a3412';
+            } else if (order.status === 'DELIVERED') {
+              title = 'Delivered';
+              message = 'Delivered successfully. For any support or issue, please contact our customer team with this order ID.';
+              bg = '#ecfdf5';
+              border = '#bbf7d0';
+              color = '#166534';
+            }
+
+            return (
+              <div style={{ background: bg, padding: '12px', borderRadius: '8px', border: `1px solid ${border}` }}>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color, textTransform: 'uppercase', fontWeight: 800 }}>{title}</h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color }}>{message}</p>
+              </div>
+            );
+          })()}
+
+          {/* Refund info from DB timeline only */}
+          {latestCustomerRefundEvent && (
             <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Refund Information</label>
-              {isFetchingLiveRefunds ? (
-                 <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Syncing timeline with Razorpay...</p>
-              ) : (
-                 liveRefunds.map((ref: any, idx: number) => {
-                   const statusColors: Record<string, {bg: string, border: string, color: string}> = {
-                     processed: { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
-                     failed: { bg: '#fef2f2', border: '#fecaca', color: '#991b1b' },
-                     pending: { bg: '#fdf8e3', border: '#fef08a', color: '#854d0e' },
-                   };
-                   const theme = statusColors[ref.status] || { bg: '#f8fafc', border: '#e2e8f0', color: '#475569' };
-
-                   return (
-                     <div key={idx} style={{ background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '6px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                         <span style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.color, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                           {ref.status === 'processed' ? 'Refunded Success' : ref.status === 'failed' ? 'Refund Failed' : ref.status}
-                         </span>
-                         <span style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.color, display: 'flex', alignItems: 'center' }}>
-                           <span style={{ opacity: 0.75, fontSize: '0.7rem', marginRight: '6px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700 }}>Refund Amount:</span>
-                           ₹{(ref.amount / 100).toFixed(2)}
-                         </span>
-                       </div>
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem', color: '#475569' }}>
-                         <div><strong style={{ opacity: 0.8 }}>Initiated:</strong> {new Date(ref.created_at * 1000).toLocaleString('en-IN')}</div>
-                         {ref.status === 'processed' && <div><strong style={{ opacity: 0.8 }}>Processed:</strong> {new Date(ref.created_at * 1000).toLocaleString('en-IN')} (Bank Accepted)</div>}
-                         {ref.status === 'failed' && (
-                           <div style={{ color: '#991b1b', marginTop: '2px' }}>
-                             <strong style={{ opacity: 0.8 }}>Failed Reason:</strong> {ref.error_description || ref.status_details?.reason || 'Bank validation rejected. Please initiate again.'}
-                           </div>
-                         )}
-                         {ref.arn && <div style={{ color: '#0f172a' }}><strong style={{ opacity: 0.8 }}>Bank Ref (ARN):</strong> <span style={{ userSelect: 'all' }}>{ref.arn}</span></div>}
-                         {ref.payment_source && (
-                           <div style={{ marginTop: '4px', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '4px' }}>
-                             <strong style={{ opacity: 0.8, textTransform: 'capitalize' }}>To {ref.payment_source.method || 'Account'}:</strong>{' '}
-                             {ref.payment_source.vpa || ref.payment_source.bank || ref.payment_source.card || ref.payment_source.wallet || 'Original Source'}
-                           </div>
-                         )}
-                         <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '2px' }}>Razorpay Record: {ref.id}</div>
-                       </div>
-                     </div>
-                   );
-                 })
-              )}
+              {(() => {
+                const event = latestCustomerRefundEvent;
+                const amount = typeof event.amount === 'number' ? `₹${event.amount}` : null;
+                const isCompleted = event.label === 'Refund completed';
+                const isFailedEvent = event.label === 'Refund failed';
+                const bg = isCompleted ? '#ecfdf5' : isFailedEvent ? '#fef2f2' : '#eff6ff';
+                const border = isCompleted ? '#bbf7d0' : isFailedEvent ? '#fecaca' : '#bfdbfe';
+                const color = isCompleted ? '#166534' : isFailedEvent ? '#991b1b' : '#1d4ed8';
+                return (
+                  <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '12px' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 800, color }}>{event.label}</div>
+                    {event.timestamp && (
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                        Updated: {new Date(event.timestamp).toLocaleString('en-IN')}
+                      </div>
+                    )}
+                    {event.referenceNumber && (
+                      <div style={{ fontSize: '0.74rem', color: '#334155', marginTop: '5px', fontWeight: 700 }}>
+                        Refund Reference: <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}>{event.referenceNumber}</span>
+                      </div>
+                    )}
+                    {amount && <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: '6px', fontWeight: 700 }}>Amount: {amount}</div>}
+                    {event.note && <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '4px' }}>{event.note}</div>}
+                  </div>
+                );
+              })()}
             </div>
-          )}
-
-          {/* Fallback Display for Unlinkable Refunds */}
-          {liveRefunds.length === 0 && !isFetchingLiveRefunds && order.refundId && ['refund initiated', 'refunded', 'refund failed'].includes(order.paymentStatus?.toLowerCase() || '') && (
-             <div style={{ marginTop: '16px', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#475569', fontSize: '0.85rem', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-               <span style={{ display: 'flex', alignItems: 'center' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> System Refund Record</span>
-               <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>Tracker ID: {order.refundId}</span>
-               <span style={{ fontSize: '0.75rem', fontStyle: 'italic', color: '#94a3b8' }}>Real-time Gateway timeline currently unavailable.</span>
-             </div>
           )}
         </motion.div>
       )}

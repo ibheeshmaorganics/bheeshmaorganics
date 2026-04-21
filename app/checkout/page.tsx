@@ -322,35 +322,6 @@ export default function CheckoutPage() {
               </span>
               <span>₹{baseTotal}</span>
             </div>
-            <div className={styles.totalRow} style={{ marginTop: '10px', fontSize: '1rem', color: '#16a34a' }}>
-              <span>Shipping</span>
-              <span>Free</span>
-            </div>
-            {isPayFull && (
-              <div className={styles.totalRow} style={{ marginTop: '10px', fontSize: '1rem', color: '#16a34a' }}>
-                <span style={{ display: 'flex', flexDirection: 'column' }}>
-                  Online Payment Discount (10%)
-                </span>
-                <span>- ₹{discountAmount}</span>
-              </div>
-            )}
-            {isCod && (
-              <div className={styles.totalRow} style={{ marginTop: '10px', fontSize: '1rem', color: '#b45309' }}>
-                <span>COD Convenience Fee</span>
-                <span>+ ₹50</span>
-              </div>
-            )}
-            <div className={styles.totalRow} style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '15px', color: 'var(--color-tertiary)', fontSize: '1.4rem' }}>
-              <span style={{ display: 'flex', flexDirection: 'column' }}>
-                {currentStep === 1 ? 'Estimated Total' : 'Order Summary'}
-                {currentStep === 2 && (
-                  <span style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '4px', maxWidth: '280px', lineHeight: 1.4 }}>
-                    Pay now: ₹{payNowAmount} {payLaterAmount > 0 ? `| Pay later: ₹${payLaterAmount}` : ''}
-                  </span>
-                )}
-              </span>
-              <span>₹{payableTotal}</span>
-            </div>
           </div>
 
           {/* Right Side: Form */}
@@ -430,21 +401,21 @@ export default function CheckoutPage() {
                       <input type="radio" name="orderType" value="PAY_FULL" checked={isPayFull} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
                       <div>
                         <strong>Pay full payment</strong>
-                        <span>10% discount: ₹{fullPaymentDiscountAmount}</span>
+                        <span><strong style={{ color: '#166534' }}>₹{fullPaymentDiscountAmount} OFF</strong> on full payment</span>
                       </div>
                     </label>
                     <label className={`${styles.orderTypeCard} ${isPartial ? styles.orderTypeCardActive : ''}`}>
                       <input type="radio" name="orderType" value="PARTIAL" checked={isPartial} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
                       <div>
                         <strong>Partial payment</strong>
-                        <span>Pay now ₹99, balance on delivery</span>
+                        <span>Pay now <strong style={{ color: '#1d4ed8' }}>₹99</strong>, balance on delivery</span>
                       </div>
                     </label>
                     <label className={`${styles.orderTypeCard} ${isCod ? styles.orderTypeCardActive : ''}`}>
                       <input type="radio" name="orderType" value="COD" checked={isCod} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
                       <div>
                         <strong>Cash on Delivery</strong>
-                        <span>₹50 convenience fee extra</span>
+                        <span><strong style={{ color: '#92400e' }}>₹50</strong> convenience fee</span>
                       </div>
                     </label>
                   </div>
@@ -453,10 +424,11 @@ export default function CheckoutPage() {
                     <h4>Order summary</h4>
                     <div><span>Subtotal</span><span>₹{baseTotal}</span></div>
                     <div><span>Shipping</span><span>Free</span></div>
-                    {isPayFull && <div><span>Online discount (10%)</span><span>- ₹{discountAmount}</span></div>}
+                    {isPayFull && <div><span>Online discount</span><span>- ₹{discountAmount}</span></div>}
                     {isCod && <div><span>COD convenience fee</span><span>+ ₹50</span></div>}
                     <div className={styles.summaryFinal}><span>Total</span><span>₹{payableTotal}</span></div>
                     <div className={styles.summaryPayNow}><span>Pay now</span><span>₹{payNowAmount}</span></div>
+                    {isPartial && <div><span>Balance on delivery</span><span>₹{payLaterAmount}</span></div>}
                   </div>
 
                   <div className={styles.stepActions}>
