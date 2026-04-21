@@ -122,16 +122,21 @@ export default function CheckoutPage() {
     window.setTimeout(() => {
       const target = orderTypeSectionRef.current || orderSummaryRef.current;
       target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
+    }, 180);
   };
 
   const handleOrderTypeChange = (orderType: string) => {
     setFormData({ ...formData, orderType });
     window.setTimeout(() => {
-      const target = orderSummaryRef.current || payButtonRef.current;
-      target?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 120);
+      const target = payButtonRef.current || orderSummaryRef.current;
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 180);
   };
+
+  useEffect(() => {
+    if (currentStep !== 2) return;
+    scrollToPaymentMethodView();
+  }, [currentStep]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -459,7 +464,7 @@ export default function CheckoutPage() {
                 </>
               ) : (
                 <>
-                  <h3 ref={orderTypeSectionRef} className={styles.sectionLabel}>Order type</h3>
+                  <h3 ref={orderTypeSectionRef} className={styles.sectionLabel} style={{ scrollMarginTop: '110px' }}>Order type</h3>
                   <div className={styles.orderTypeGrid}>
                     <label className={`${styles.orderTypeCard} ${isPayFull ? styles.orderTypeCardActive : ''}`}>
                       <input type="radio" name="orderType" value="PAY_FULL" checked={isPayFull} onChange={e => handleOrderTypeChange(e.target.value)} />
