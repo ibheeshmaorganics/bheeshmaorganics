@@ -141,31 +141,77 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
           .responsiveGrid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.5rem;
+            gap: 0.65rem;
+          }
+          .productCard {
+            background: white;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+            border: 1px solid rgba(75, 174, 79, 0.12);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            max-width: 100vw;
+          }
+          .productImageLink {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+            border-bottom: 1px solid #eaeaea;
+            text-decoration: none;
+            color: inherit;
+            height: 152px;
+          }
+          .productContent {
+            padding: 0.62rem;
+            min-width: 0;
+          }
+          .productActions {
+            display: flex;
+            flex-direction: row;
+            gap: 5px;
+            width: 100%;
+            align-items: center;
+            margin-top: 10px;
+          }
+          @media (max-width: 420px) {
+            .responsiveGrid { gap: 0.55rem; }
+            .productImageLink { height: 136px; }
+            .productContent { padding: 0.55rem; }
           }
           @media (min-width: 640px) {
             .responsiveGrid {
               grid-template-columns: repeat(3, minmax(0, 1fr));
               gap: 1rem;
             }
+            .productCard { border-radius: 20px; }
+            .productImageLink { height: 180px; }
+            .productContent { padding: 1rem; }
+            .productActions { gap: 8px; margin-top: 18px; }
           }
           @media (min-width: 1024px) {
             .responsiveGrid {
               grid-template-columns: repeat(4, minmax(0, 1fr));
               gap: 1.5rem;
             }
+            .productCard { border-radius: 24px; }
+            .productImageLink { height: 220px; }
+            .productContent { padding: 1.25rem; }
+            .productActions { margin-top: 22px; }
           }
         `}} />
         <div className="responsiveGrid">
           {visibleProducts.map(p => (
             <div
               key={p._id}
-              style={{ background: 'white', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 15px 35px rgba(0, 0, 0, 0.04)', border: '1px solid rgba(75, 174, 79, 0.1)', display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100vw' }}
+              className="productCard"
             >
-              <Link href={`/products/${p._id}`} prefetch={true} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'clamp(140px, 35vw, 220px)', background: '#f8fafc', borderBottom: '1px solid #eaeaea', textDecoration: 'none', color: 'inherit' }}>
+              <Link href={`/products/${p._id}`} prefetch={true} className="productImageLink">
                 <ProductImageCarousel images={p.images && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : [])} name={p.name} />
               </Link>
-              <div style={{ padding: 'clamp(0.6rem, 2vw, 1.25rem)', minWidth: 0 }}>
+              <div className="productContent">
                 {(() => {
                   const allVariants = getAllVariants(p);
                   const vi = selectedVariants[p._id] || 0;
@@ -228,7 +274,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                           );
                         })}
                       </div>
-                        <div style={{ display: 'flex', flexDirection: 'row', gap: '5px', width: '100%', alignItems: 'center', marginTop: 'clamp(15px, 3vw, 25px)' }}>
+                        <div className="productActions">
                           <Link
                             href={`/products/${p._id}`}
                             prefetch={true}

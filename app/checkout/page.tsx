@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,6 +46,9 @@ declare global {
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const orderTypeSectionRef = useRef<HTMLHeadingElement | null>(null);
+  const orderSummaryRef = useRef<HTMLDivElement | null>(null);
+  const payButtonRef = useRef<HTMLButtonElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -108,6 +111,21 @@ export default function CheckoutPage() {
   const handlePhoneChange = (value: string) => {
     const onlyDigits = value.replace(/\D/g, '').slice(0, 10);
     setFormData({ ...formData, phone: onlyDigits });
+  };
+
+  const scrollToPaymentMethodView = () => {
+    window.setTimeout(() => {
+      const target = orderTypeSectionRef.current || orderSummaryRef.current;
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+  };
+
+  const handleOrderTypeChange = (orderType: string) => {
+    setFormData({ ...formData, orderType });
+    window.setTimeout(() => {
+      const target = orderSummaryRef.current || payButtonRef.current;
+      target?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 120);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -387,7 +405,10 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     className={styles.payBtn}
-                    onClick={() => setCurrentStep(2)}
+                    onClick={() => {
+                      setCurrentStep(2);
+                      scrollToPaymentMethodView();
+                    }}
                     disabled={!formData.customerName || !isPhoneValid || !formData.email || !formData.street || !formData.city || !formData.state || !formData.pinCode}
                   >
                     Continue to payment method <span style={{ fontSize: '1.2rem' }}>→</span>
@@ -395,24 +416,24 @@ export default function CheckoutPage() {
                 </>
               ) : (
                 <>
-                  <h3 className={styles.sectionLabel}>Order type</h3>
+                  <h3 ref={orderTypeSectionRef} className={styles.sectionLabel}>Order type</h3>
                   <div className={styles.orderTypeGrid}>
                     <label className={`${styles.orderTypeCard} ${isPayFull ? styles.orderTypeCardActive : ''}`}>
-                      <input type="radio" name="orderType" value="PAY_FULL" checked={isPayFull} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
+                      <input type="radio" name="orderType" value="PAY_FULL" checked={isPayFull} onChange={e => handleOrderTypeChange(e.target.value)} />
                       <div>
                         <strong>Pay full payment</strong>
                         <span><strong style={{ color: '#166534' }}>₹{fullPaymentDiscountAmount} OFF</strong> on full payment</span>
                       </div>
                     </label>
                     <label className={`${styles.orderTypeCard} ${isPartial ? styles.orderTypeCardActive : ''}`}>
-                      <input type="radio" name="orderType" value="PARTIAL" checked={isPartial} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
+                      <input type="radio" name="orderType" value="PARTIAL" checked={isPartial} onChange={e => handleOrderTypeChange(e.target.value)} />
                       <div>
                         <strong>Partial payment</strong>
                         <span>Pay now <strong style={{ color: '#1d4ed8' }}>₹99</strong>, balance on delivery</span>
                       </div>
                     </label>
                     <label className={`${styles.orderTypeCard} ${isCod ? styles.orderTypeCardActive : ''}`}>
-                      <input type="radio" name="orderType" value="COD" checked={isCod} onChange={e => setFormData({ ...formData, orderType: e.target.value })} />
+                      <input type="radio" name="orderType" value="COD" checked={isCod} onChange={e => handleOrderTypeChange(e.target.value)} />
                       <div>
                         <strong>Cash on Delivery</strong>
                         <span><strong style={{ color: '#92400e' }}>₹50</strong> convenience fee</span>
@@ -420,7 +441,7 @@ export default function CheckoutPage() {
                     </label>
                   </div>
 
-                  <div className={styles.summaryBox}>
+                  <div ref={orderSummaryRef} className={styles.summaryBox}>
                     <h4>Order summary</h4>
                     <div><span>Subtotal</span><span>₹{baseTotal}</span></div>
                     <div><span>Shipping</span><span>Free</span></div>
@@ -433,7 +454,7 @@ export default function CheckoutPage() {
 
                   <div className={styles.stepActions}>
                     <button type="button" className={styles.secondaryBtn} onClick={() => setCurrentStep(1)}>Back</button>
-                    <button type="submit" className={styles.payBtn} disabled={loading || !hasSelectedOrderType} style={{ marginTop: 0 }}>
+                    <button ref={payButtonRef} type="submit" className={styles.payBtn} disabled={loading || !hasSelectedOrderType} style={{ marginTop: 0 }}>
                       {loading ? 'Processing Securely...' : <>{isCod ? 'Place order' : 'Pay'} <span style={{ fontSize: '1.2rem' }}>→</span></>}
                     </button>
                   </div>

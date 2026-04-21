@@ -65,17 +65,38 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
   const isSuccess = order.status === 'DELIVERED';
 
   const s = order.status?.toUpperCase() || '';
-  let statusText = 'Processing';
+  let statusText = 'Placed';
   let StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
   
-  if (isFailed) {
+  if (paymentStatusLower === 'refunded') {
+    statusText = 'Refunded';
+    StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+  } else if (paymentStatusLower === 'refund initiated') {
+    statusText = 'Refund Initiated';
+    StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M3 12h18"></path><path d="m8 7-5 5 5 5"></path></svg>;
+  } else if (s === 'RTO') {
+    statusText = 'Return';
+    StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2"><path d="M3 12h18"></path><path d="m8 7-5 5 5 5"></path></svg>;
+  } else if (isFailed) {
     statusText = order.paymentStatus === 'payment failed' ? 'Payment Failed' : 'Cancelled';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
+  } else if (s === 'FAILED') {
+    statusText = 'Failed';
+    StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
+  } else if (s === 'CANCELLED') {
+    statusText = 'Cancelled';
+    StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
+  } else if (s === 'CONFIRMED') {
+    statusText = 'Confirmed';
+    StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M20 6 9 17l-5-5"></path></svg>;
+  } else if (s === 'NEW' || s === 'DRAFT') {
+    statusText = 'Placed';
+    StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
   } else if (isSuccess) {
     statusText = 'Delivered';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
   } else if (isTransit) {
-    statusText = 'In Transit';
+    statusText = 'Confirmed';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>;
   }
 
@@ -191,7 +212,7 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div>
               <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>Order ID</span>
-              <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>#{order._id.slice(-8).toUpperCase()}</div>
+              <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>#{order._id.slice(-6).toUpperCase()}</div>
             </div>
             {(order.awbCode || order.trackingLink) && (
               <div style={{ textAlign: 'right' }}>
@@ -213,7 +234,7 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: i !== order.products.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <span style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.9rem' }}>{item.quantity}x</span>
-                  <span style={{ color: '#475569', fontSize: '0.9rem', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.productId?.name || 'Product'}</span>
+                  <span style={{ color: '#475569', fontSize: '0.9rem', lineHeight: '1.35', wordBreak: 'break-word', whiteSpace: 'normal' }}>{item.productId?.name || 'Product'}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <span style={{ opacity: 0.6, fontSize: '0.65rem', marginRight: '4px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 800 }}>Amount:</span>
@@ -364,10 +385,12 @@ function TrackContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchOrders = async (id: string) => {
+  const fetchOrders = async (id: string, options?: { silent?: boolean }) => {
     if (!id) return;
-    setLoading(true);
-    setError('');
+    if (!options?.silent) {
+      setLoading(true);
+      setError('');
+    }
     try {
       const res = await fetch(`/api/orders/track?id=${encodeURIComponent(id)}`);
       const contentType = res.headers.get("content-type");
@@ -381,17 +404,21 @@ function TrackContent() {
         throw new Error(data.error || 'Failed to fetch tracking data');
       }
       setOrders(data.orders || []);
-      if (data.orders?.length === 0) {
+      if (!options?.silent && data.orders?.length === 0) {
         setError('No orders found for this Phone or Email.');
       }
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Failed to fetch tracking data');
+      if (!options?.silent) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('Failed to fetch tracking data');
+        }
       }
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -400,6 +427,15 @@ function TrackContent() {
       fetchOrders(initialId);
     }
   }, [initialId]);
+
+  useEffect(() => {
+    const activeQuery = query.trim();
+    if (!activeQuery || orders.length === 0) return;
+    const timer = window.setInterval(() => {
+      fetchOrders(activeQuery, { silent: true });
+    }, 60 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [query, orders.length]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -440,7 +476,7 @@ function TrackContent() {
               required
             />
             <button type="submit" className={styles.btn} disabled={loading}>
-              {loading ? 'Searching...' : 'Track Package'}
+              {loading ? 'Searching...' : 'Track Orders'}
             </button>
           </form>
 

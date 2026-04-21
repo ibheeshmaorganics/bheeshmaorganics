@@ -13,8 +13,8 @@ export function ProductImageCarousel({ images, name }: { images: string[]; name:
 
   if (images.length === 1) {
     return (
-      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-        <Image src={images[0]} alt={name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority style={{ objectFit: 'cover', objectPosition: 'top', borderRadius: '8px' }} />
+      <div style={{ width: '100%', height: '100%', position: 'relative', background: '#ffffff' }}>
+        <Image src={images[0]} alt={name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority style={{ objectFit: 'cover', objectPosition: 'center', borderRadius: '8px' }} />
       </div>
     );
   }
@@ -23,8 +23,8 @@ export function ProductImageCarousel({ images, name }: { images: string[]; name:
     <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
       <div style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', width: '100%', height: '100%', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', scrollBehavior: 'smooth' }}>
         {images.map((img, i) => (
-          <div key={i} style={{ width: '100%', height: '100%', position: 'relative', flexShrink: 0, scrollSnapAlign: 'start' }}>
-            <Image src={img} alt={name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority={i === 0} style={{ objectFit: 'cover', objectPosition: 'top' }} />
+          <div key={i} style={{ width: '100%', height: '100%', position: 'relative', flexShrink: 0, scrollSnapAlign: 'start', background: '#ffffff' }}>
+            <Image src={img} alt={name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" priority={i === 0} style={{ objectFit: 'cover', objectPosition: 'center' }} />
           </div>
         ))}
       </div>
