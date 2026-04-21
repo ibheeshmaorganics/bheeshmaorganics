@@ -114,12 +114,10 @@ export default function CheckoutPage() {
   };
 
   const scrollToPaymentMethodView = () => {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
       const target = orderTypeSectionRef.current || orderSummaryRef.current;
       target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
+    }, 120);
   };
 
   const handleOrderTypeChange = (orderType: string) => {
@@ -130,17 +128,6 @@ export default function CheckoutPage() {
     }, 120);
   };
 
-  const validateStepOne = (): boolean => {
-    if (!formData.customerName.trim()) return toast.error('Please enter customer name.'), false;
-    if (!isPhoneValid) return toast.error('Please enter a valid 10-digit mobile number.'), false;
-    if (!formData.email.trim()) return toast.error('Please enter email address.'), false;
-    if (!formData.street.trim()) return toast.error('Please enter street/area.'), false;
-    if (!formData.city.trim()) return toast.error('Please enter city.'), false;
-    if (!formData.state.trim()) return toast.error('Please enter state.'), false;
-    if (!formData.pinCode.trim()) return toast.error('Please enter PIN code.'), false;
-    return true;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0) {
@@ -149,11 +136,6 @@ export default function CheckoutPage() {
     }
     if (!isPhoneValid) {
       toast.error('Please enter a valid 10-digit mobile number.');
-      return;
-    }
-    if (!hasSelectedOrderType) {
-      toast.error('Please select an order type to continue.');
-      scrollToPaymentMethodView();
       return;
     }
     setLoading(true);
@@ -189,6 +171,7 @@ export default function CheckoutPage() {
             name: item.name,
             image: item.imageUrl || (item.images && item.images[0]) || ''
           })),
+          paymentMethod: formData.orderType === 'PAY_FULL' ? 'Razorpay' : formData.orderType === 'PARTIAL' ? 'Partial' : 'Cash',
           orderType: formData.orderType
         })
       });
@@ -423,17 +406,17 @@ export default function CheckoutPage() {
                     type="button"
                     className={styles.payBtn}
                     onClick={() => {
-                      if (!validateStepOne()) return;
                       setCurrentStep(2);
                       scrollToPaymentMethodView();
                     }}
+                    disabled={!formData.customerName || !isPhoneValid || !formData.email || !formData.street || !formData.city || !formData.state || !formData.pinCode}
                   >
                     Continue to payment method <span style={{ fontSize: '1.2rem' }}>→</span>
                   </button>
                 </>
               ) : (
                 <>
-                  <h3 ref={orderTypeSectionRef} className={styles.sectionLabel} style={{ scrollMarginTop: '90px' }}>Order type</h3>
+                  <h3 ref={orderTypeSectionRef} className={styles.sectionLabel}>Order type</h3>
                   <div className={styles.orderTypeGrid}>
                     <label className={`${styles.orderTypeCard} ${isPayFull ? styles.orderTypeCardActive : ''}`}>
                       <input type="radio" name="orderType" value="PAY_FULL" checked={isPayFull} onChange={e => handleOrderTypeChange(e.target.value)} />
@@ -471,8 +454,8 @@ export default function CheckoutPage() {
 
                   <div className={styles.stepActions}>
                     <button type="button" className={styles.secondaryBtn} onClick={() => setCurrentStep(1)}>Back</button>
-                    <button ref={payButtonRef} type="submit" className={styles.payBtn} disabled={loading} style={{ marginTop: 0 }}>
-                      {loading ? 'Processing Securely...' : <>{!hasSelectedOrderType || isCod ? 'Place order' : 'Pay'} <span style={{ fontSize: '1.2rem' }}>→</span></>}
+                    <button ref={payButtonRef} type="submit" className={styles.payBtn} disabled={loading || !hasSelectedOrderType} style={{ marginTop: 0 }}>
+                      {loading ? 'Processing Securely...' : <>{isCod ? 'Place order' : 'Pay'} <span style={{ fontSize: '1.2rem' }}>→</span></>}
                     </button>
                   </div>
                 </>

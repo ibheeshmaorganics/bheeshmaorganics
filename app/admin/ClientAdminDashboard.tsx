@@ -644,7 +644,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
 
   // Analytics Metrics
   const validOrdersForMetrics = orders.filter(o => o.paymentStatus === 'paid' || !o.paymentStatus);
-  const totalRevenue = validOrdersForMetrics.reduce((acc, curr) => acc + (!['CANCELLED', 'RTO', 'CANCELLED_BEFORE_DISPATCH'].includes(curr.status?.toUpperCase() || '') ? curr.totalAmount : 0), 0);
+  const totalRevenue = validOrdersForMetrics.reduce((acc, curr) => acc + ((curr.status?.toUpperCase() || '') === 'DELIVERED' ? curr.totalAmount : 0), 0);
   const pendingOrders = validOrdersForMetrics.filter(o => o.status === 'NEW').length;
   const refundsAttentionCount = orders.filter(o => {
     const k = getRefundsPipelineCategory(o);
@@ -710,7 +710,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
 
               const filterData = (dateLimit: Date) => {
                 const filtered = validOrdersForMetrics.filter(o => new Date(o.createdAt) >= dateLimit);
-                return { count: filtered.length, revenue: filtered.reduce((acc, o) => acc + (!['CANCELLED', 'RTO', 'CANCELLED_BEFORE_DISPATCH'].includes(o.status?.toUpperCase() || '') ? (o.totalAmount || 0) : 0), 0) };
+                return { count: filtered.length, revenue: filtered.reduce((acc, o) => acc + ((o.status?.toUpperCase() || '') === 'DELIVERED' ? (o.totalAmount || 0) : 0), 0) };
               };
 
               const d24h = filterData(last24h);
@@ -1186,37 +1186,17 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
             const stageLockedByPayment = ['payment failed', 'pending', 'payment processing', 'payment processing/pending', 'refunded'].includes(editingOrder.paymentStatus?.toLowerCase() || '');
             const stageManagedByShiprocket = ['READY_TO_SHIP', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED'].includes(persistedStatus);
             const disableStageSelect = stageLockedBySavedTerminalState || stageLockedByPayment || stageManagedByShiprocket;
-            const stageOptions = [
-              { value: 'NEW', label: 'NEW', hint: 'Unconfirmed' },
-              { value: 'CONFIRMED', label: 'CONFIRMED', hint: 'Pack' },
-              { value: 'CANCELLED', label: 'CANCELLED', hint: 'Stop order' },
-            ] as const;
             return (
-          <div style={{ background: disableStageSelect ? '#f1f5f9' : '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px', opacity: disableStageSelect ? 0.8 : 1 }}>
-            {stageOptions.map(option => {
-              const active = (editingOrder.status || '').toUpperCase() === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  disabled={disableStageSelect}
-                  onClick={() => setEditingOrder({ ...editingOrder, status: option.value })}
-                  style={{
-                    border: active ? '1px solid #1d4ed8' : '1px solid #cbd5e1',
-                    background: active ? '#dbeafe' : '#ffffff',
-                    color: active ? '#1e3a8a' : '#334155',
-                    borderRadius: '6px',
-                    padding: '8px 6px',
-                    cursor: disableStageSelect ? 'not-allowed' : 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  <div style={{ fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.3px' }}>{option.label}</div>
-                  <div style={{ fontSize: '0.66rem', opacity: 0.8, marginTop: '2px' }}>{option.hint}</div>
-                </button>
-              );
-            })}
-          </div>
+          <select 
+            style={{ background: disableStageSelect ? '#f1f5f9' : '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500, cursor: disableStageSelect ? 'not-allowed' : 'pointer' }} 
+            value={editingOrder.status} 
+            onChange={e => setEditingOrder({ ...editingOrder, status: e.target.value })}
+            disabled={disableStageSelect}
+          >
+            <option value="NEW">🚀 NEW - Unconfirmed</option>
+            <option value="CONFIRMED">📦 CONFIRMED - Pack</option>
+            <option value="CANCELLED">🛑 CANCELLED</option>
+          </select>
             );
           })()}
           <div style={{ marginTop: '6px', fontSize: '0.7rem', color: '#64748b' }}>

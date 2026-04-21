@@ -349,11 +349,6 @@
   font-size: 0.85rem;
 }
 
-.orderTypeCard > div {
-  min-width: 0;
-  flex: 1;
-}
-
 .orderTypeCard:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
@@ -564,25 +559,5 @@
     font-size: 0.95rem;
     color: #0f172a;
     font-weight: 700;
-  }
-
-  .orderTypeCard {
-    gap: 0.6rem;
-    padding: 0.8rem 0.75rem;
-  }
-
-  .orderTypeCard strong {
-    display: block;
-    font-size: 0.92rem;
-    line-height: 1.25;
-    white-space: normal;
-    word-break: break-word;
-  }
-
-  .orderTypeCard span {
-    font-size: 0.78rem;
-    line-height: 1.3;
-    white-space: normal;
-    word-break: break-word;
   }
 }
