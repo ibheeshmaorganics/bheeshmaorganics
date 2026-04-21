@@ -43,7 +43,9 @@ export async function POST(req: NextRequest) {
       internalStatus = 'DELIVERED';
     } else if (internalStatus.includes('OUT FOR DELIVERY')) {
       internalStatus = 'OUT_FOR_DELIVERY';
-    } else if (internalStatus.includes('IN TRANSIT') || internalStatus.includes('SHIPPED') || internalStatus.includes('DISPATCH')) {
+    } else if (internalStatus.includes('IN TRANSIT')) {
+      internalStatus = 'IN_TRANSIT';
+    } else if (internalStatus.includes('SHIPPED') || internalStatus.includes('DISPATCH')) {
       internalStatus = 'SHIPPED';
     } else if (internalStatus.includes('READY') || internalStatus.includes('MANIFEST') || internalStatus.includes('PICKUP SCHEDULED')) {
       internalStatus = 'READY_TO_SHIP';

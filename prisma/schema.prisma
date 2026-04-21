@@ -31,6 +31,7 @@ model Product {
 
 model Order {
   id                String   @id @default(uuid())
+  shortOrderId      String?  @unique
   customerName      String
   phone             String
   email             String

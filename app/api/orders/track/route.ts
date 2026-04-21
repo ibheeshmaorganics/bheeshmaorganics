@@ -36,9 +36,10 @@ export async function GET(req: NextRequest) {
     }
 
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
-    const orConditions: Array<{ phone?: string; email?: string; id?: string }> = [
+    const orConditions: Array<{ phone?: string; email?: string; id?: string; shortOrderId?: string }> = [
       { phone: identifier },
       { email: identifier },
+      { shortOrderId: identifier.toUpperCase() },
     ];
     
     if (isUUID) {

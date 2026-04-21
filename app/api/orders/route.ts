@@ -21,6 +21,18 @@ type SanitizedOrderProduct = {
   image: string;
 };
 
+async function generateUniqueShortOrderId(): Promise<string> {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const candidate = `BO-${Math.floor(100000 + Math.random() * 900000)}`;
+    const existing = await prisma.order.findUnique({
+      where: { shortOrderId: candidate } as any,
+      select: { id: true },
+    });
+    if (!existing) return candidate;
+  }
+  throw new Error('Unable to generate unique short order id. Please retry.');
+}
+
 function getBaseProductId(rawProductId: string): string {
   return rawProductId.slice(0, 36);
 }
@@ -174,7 +186,20 @@ export async function POST(req: NextRequest) {
       orderType: paymentMethod === 'Razorpay' ? 'PAY_FULL' : paymentMethod === 'Partial' ? 'PARTIAL' : 'COD',
     };
 
+    let shortOrderId: string | undefined;
+    try {
+      shortOrderId = await generateUniqueShortOrderId();
+    } catch (idErr: unknown) {
+      const idMessage = idErr instanceof Error ? idErr.message : String(idErr);
+      const shortOrderIdFieldUnavailable =
+        idMessage.includes('Unknown argument `shortOrderId`') ||
+        idMessage.includes('Unknown arg `shortOrderId`') ||
+        idMessage.includes('Unknown field `shortOrderId`');
+      if (!shortOrderIdFieldUnavailable) throw idErr;
+    }
+
     const orderData = {
+      ...(shortOrderId ? { shortOrderId } : {}),
       customerName: body.customerName,
       phone: body.phone,
       email: body.email,
@@ -194,14 +219,16 @@ export async function POST(req: NextRequest) {
       const createMessage = createErr instanceof Error ? createErr.message : String(createErr);
       const missingTransactionSummaryColumn =
         createMessage.includes('Unknown argument `transactionSummary`') ||
-        createMessage.includes('Unknown arg `transactionSummary`');
+        createMessage.includes('Unknown arg `transactionSummary`') ||
+        createMessage.includes('Unknown argument `shortOrderId`') ||
+        createMessage.includes('Unknown arg `shortOrderId`');
 
       if (!missingTransactionSummaryColumn) {
         throw createErr;
       }
 
       // Backward-compatible fallback when runtime Prisma client/schema isn't synced yet.
-      const { transactionSummary: _ignored, ...orderDataWithoutSummary } = orderData;
+      const { transactionSummary: _ignored, shortOrderId: _ignoredShortOrderId, ...orderDataWithoutSummary } = orderData;
       order = await prisma.order.create({ data: orderDataWithoutSummary });
     }
     if (paymentMethod === 'Razorpay' || paymentMethod === 'Partial') {

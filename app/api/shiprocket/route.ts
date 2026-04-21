@@ -71,13 +71,23 @@ export async function POST(req: Request) {
       const srPaymentMethod = isCod ? 'COD' : 'Prepaid';
 
       // Compile Order items logically
-      const orderItems = products.map((p: any) => ({
-        name: p.productId?.name || 'Bheeshma Organics Assorted Products',
-        sku: p.productId?.id || 'SKU-BO-001',
-        units: p.quantity || 1,
-        selling_price: Math.max(1, p.price || 0),
-        discount: p.discount || 0
-      }));
+      const orderItems = products.map((p: any, idx: number) => {
+        const rawProductId =
+          typeof p?.productId === 'string'
+            ? p.productId
+            : (typeof p?.productId?.id === 'string' ? p.productId.id : '');
+        const safeBaseSku = (rawProductId || `SKU-BO-${String(order.id).slice(-6)}`)
+          .replace(/[^a-zA-Z0-9-_]/g, '')
+          .slice(0, 30);
+        return {
+          name: p.productId?.name || p.name || 'Bheeshma Organics Assorted Products',
+          // Shiprocket requires line-level SKU uniqueness inside one shipment payload.
+          sku: `${safeBaseSku}-${idx + 1}`,
+          units: p.quantity || 1,
+          selling_price: Math.max(1, p.price || 0),
+          discount: p.discount || 0
+        };
+      });
 
       // Safety placeholder if cart format error
       if (orderItems.length === 0) {
@@ -86,7 +96,7 @@ export async function POST(req: Request) {
 
       // 3. Dispatch & Create Order in Shiprocket
       const srOrderPayload = {
-        order_id: `BO-${order.id.slice(-6)}-${Date.now().toString().slice(-4)}`,
+        order_id: order.shortOrderId || `BO-${order.id}`,
         order_date: new Date(order.createdAt).toISOString().split('T')[0],
         pickup_location: process.env.SHIPROCKET_PICKUP_LOCATION || 'Primary', // Must match their Shiprocket Primary Pickup Location Name
         billing_customer_name: order.customerName,

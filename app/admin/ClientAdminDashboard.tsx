@@ -8,7 +8,7 @@ import 'react-confirm-alert/src/react-confirm-alert.css';
 import { toast } from 'sonner';
 
 interface Product { _id: string; name: string; price: number; discount?: number; quantity?: number; unit?: string; images?: string[]; imageUrl?: string; createdAt: string; description?: string; inStock?: boolean; variants?: any[]; }
-interface Order { _id: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; refundStatus?: string; refundFailureReason?: string; refundInitiatedAt?: string; refundCompletedAt?: string; refundTimeline?: any[]; address: any; products: any[]; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; }
+interface Order { _id: string; shortOrderId?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; refundStatus?: string; refundFailureReason?: string; refundInitiatedAt?: string; refundCompletedAt?: string; refundTimeline?: any[]; address: any; products: any[]; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; }
 
 function isGatewayRefundableOrder(o: Pick<Order, 'paymentMethod'>): boolean {
   const m = (o.paymentMethod || '').toLowerCase();
@@ -399,6 +399,39 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     } catch (e) {
       toast.error('Error updating order');
     }
+  };
+
+  const sendOrderConfirmationToCustomer = (order: Order) => {
+    const phoneDigits = (order.phone || '').replace(/\D/g, '');
+    if (!phoneDigits || phoneDigits.length < 10) {
+      toast.error('Customer phone number is invalid.');
+      return;
+    }
+    const normalizedPhone = phoneDigits.length === 10 ? `91${phoneDigits}` : phoneDigits;
+    const items = (order.products || [])
+      .map((item: any) => `- ${item?.productId?.name || 'Product'} x${item?.quantity || 1}`)
+      .join('\n');
+    const address = order.address && typeof order.address === 'object'
+      ? [order.address.street, order.address.city, order.address.state, order.address.pinCode].filter(Boolean).join(', ')
+      : '';
+    const message = [
+      `Hi ${order.customerName},`,
+      '',
+      `This is Bheeshma Organics confirming your order #${(order.shortOrderId || order._id.slice(-6).toUpperCase())}.`,
+      '',
+      'Order details:',
+      items || '- Product details unavailable',
+      '',
+      `Total: ₹${order.totalAmount}`,
+      `Payment: ${order.paymentMethod || 'N/A'}`,
+      address ? `Delivery Address: ${address}` : '',
+      '',
+      'Please reply YES to confirm this order or share any corrections.',
+      '',
+      'Thank you!'
+    ].filter(Boolean).join('\n');
+    const waUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleUpdateOrderDetails = async (e: React.FormEvent) => {
@@ -877,8 +910,19 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                 {isEditingOrder && editingOrder ? (
                   <div className={styles.editOrderCard} style={{ color: '#1e293b', background: '#fff', padding: '1rem', borderRadius: '4px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#1e293b' }}>Edit Order: #{editingOrder._id.slice(-6).toUpperCase()}</h3>
-                      <button onClick={handleCloseOrderEditor} style={{ color: '#1e293b', background: '#e2e8f0', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>Back</button>
+                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#1e293b' }}>Edit Order: #{editingOrder.shortOrderId || editingOrder._id.slice(-6).toUpperCase()}</h3>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {(editingOrder.status || '').toUpperCase() === 'NEW' && (
+                          <button
+                            type="button"
+                            onClick={() => sendOrderConfirmationToCustomer(editingOrder)}
+                            style={{ color: '#166534', background: '#f0fdf4', border: '1px solid #86efac', padding: '6px 12px', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
+                          >
+                            Send Confirmation
+                          </button>
+                        )}
+                        <button onClick={handleCloseOrderEditor} style={{ color: '#1e293b', background: '#e2e8f0', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>Back</button>
+                      </div>
                     </div>
 
                     <form onSubmit={handleUpdateOrderDetails} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
@@ -1266,6 +1310,8 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                     const searchLower = orderSearch.toLowerCase().replace(/#/g, '').trim();
                     const dateString = new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase();
                     const matchesSearch = o._id.toLowerCase().includes(searchLower) ||
+                      (o.shortOrderId || '').toLowerCase().includes(searchLower) ||
+                      (o.awbCode || '').toLowerCase().includes(searchLower) ||
                       o.customerName.toLowerCase().includes(searchLower) ||
                       o.phone.toLowerCase().includes(searchLower) ||
                       o.email.toLowerCase().includes(searchLower) ||
@@ -1387,6 +1433,8 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                               if (searchLower !== '') {
                                 const matchingOrders = orders.filter(o => 
                                    o._id.toLowerCase().includes(searchLower) || 
+                                   (o.shortOrderId || '').toLowerCase().includes(searchLower) ||
+                                   (o.awbCode || '').toLowerCase().includes(searchLower) ||
                                    o.phone.toLowerCase().includes(searchLower)
                                 );
                                 if (matchingOrders.length === 1) {
@@ -1506,20 +1554,28 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                       title={blockSelection ? "Cannot ship: Payment not successfully captured" : ""}
                                     />
                                   </td>
-                                  <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>#{o._id.slice(-6).toUpperCase()}</td>
+                                  <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>#{o.shortOrderId || o._id.slice(-6).toUpperCase()}</td>
                                   <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                                     <strong>{o.customerName}</strong><br />
                                     <span style={{ color: 'var(--color-text-light)', fontSize: '0.6rem' }}>{o.phone}</span>
                                   </td>
                                   <td style={{ fontWeight: 700, color: 'var(--color-tertiary)', padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
-                                    <span style={{ display: 'flex', alignItems: 'center' }}>
-                                      <span style={{ opacity: 0.6, fontSize: '0.65rem', marginRight: '4px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amt:</span> 
+                                    <span style={{ display: 'flex', alignItems: 'center', fontSize: '0.95rem' }}>
+                                      <span style={{ opacity: 0.7, fontSize: '0.72rem', marginRight: '5px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amt:</span> 
                                       ₹{o.totalAmount}
                                     </span>
+                                    <div style={{ marginTop: '3px', fontSize: '0.72rem', color: '#475569', fontWeight: 700 }}>
+                                      {(() => {
+                                        const method = (o.paymentMethod || '').toLowerCase();
+                                        if (method === 'partial') return 'Partial Paid ₹99';
+                                        if (method === 'razorpay') return 'Fully Paid';
+                                        return 'Cash on Delivery';
+                                      })()}
+                                    </div>
                                   </td>
                                   <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                                     <span style={{
-                                      fontSize: '0.6rem',
+                                      fontSize: '0.72rem',
                                       fontWeight: 700,
                                       padding: '4px 10px',
                                       borderRadius: '20px',
@@ -1556,9 +1612,20 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                       </span>
                                   </td>
                                   <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>
-                                      <button className={styles.adminWhiteBtn} style={{ padding: '6px 14px', fontSize: '0.65rem', whiteSpace: 'nowrap', pointerEvents: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#334155' }} onClick={() => { setEditingOrder(o); setOrderEditSnapshot(getEditableOrderSnapshot(o)); setIsEditingOrder(true); }}>
-                                        Manage <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-                                      </button>
+                                      <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                                        {(o.status || '').toUpperCase() === 'NEW' && (
+                                          <button
+                                            type="button"
+                                            style={{ padding: '6px 10px', fontSize: '0.62rem', whiteSpace: 'nowrap', borderRadius: '8px', border: '1px solid #86efac', background: '#f0fdf4', color: '#166534', fontWeight: 700, cursor: 'pointer' }}
+                                            onClick={() => sendOrderConfirmationToCustomer(o)}
+                                          >
+                                            Send Confirmation
+                                          </button>
+                                        )}
+                                        <button className={styles.adminWhiteBtn} style={{ padding: '6px 14px', fontSize: '0.65rem', whiteSpace: 'nowrap', pointerEvents: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#334155' }} onClick={() => { setEditingOrder(o); setOrderEditSnapshot(getEditableOrderSnapshot(o)); setIsEditingOrder(true); }}>
+                                          Manage <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                                        </button>
+                                      </div>
                                   </td>
                                 </tr>
                               );
@@ -1782,6 +1849,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                 if (searchLower === '') return true;
                 const dateString = new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase();
                 return o._id.toLowerCase().includes(searchLower) ||
+                  (o.shortOrderId || '').toLowerCase().includes(searchLower) ||
                   o.customerName.toLowerCase().includes(searchLower) ||
                   o.phone.toLowerCase().includes(searchLower) ||
                   o.email.toLowerCase().includes(searchLower) ||
@@ -1892,15 +1960,25 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                             { color: '#92400e', background: '#fef3c7' };
                           return (
                           <tr key={o._id}>
-                            <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>#{o._id.slice(-6).toUpperCase()}</td>
+                            <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>#{o.shortOrderId || o._id.slice(-6).toUpperCase()}</td>
                             <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                               <strong>{o.customerName}</strong><br />
                               <span style={{ color: 'var(--color-text-light)', fontSize: '0.6rem' }}>{o.phone}</span>
                             </td>
-                            <td style={{ fontWeight: 700, color: 'var(--color-tertiary)', padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>₹{o.totalAmount}</td>
+                            <td style={{ fontWeight: 700, color: 'var(--color-tertiary)', padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
+                              <div style={{ fontSize: '0.95rem' }}>₹{o.totalAmount}</div>
+                              <div style={{ marginTop: '3px', fontSize: '0.72rem', color: '#475569', fontWeight: 700 }}>
+                                {(() => {
+                                  const method = (o.paymentMethod || '').toLowerCase();
+                                  if (method === 'partial') return 'Partial Paid ₹99';
+                                  if (method === 'razorpay') return 'Fully Paid';
+                                  return 'Cash on Delivery';
+                                })()}
+                              </div>
+                            </td>
                             <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                               <span style={{
-                                fontSize: '0.6rem',
+                                fontSize: '0.72rem',
                                 fontWeight: 700,
                                 padding: '4px 10px',
                                 borderRadius: '20px',
