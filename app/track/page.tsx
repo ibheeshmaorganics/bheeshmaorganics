@@ -74,37 +74,48 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
 
   const s = order.status?.toUpperCase() || '';
   let statusText = 'Placed';
+  let statusColor = '#d97706';
   let StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
   
   if (paymentStatusLower === 'refunded') {
     statusText = 'Refunded';
+    statusColor = '#16a34a';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
   } else if (paymentStatusLower === 'refund initiated') {
     statusText = 'Refund Initiated';
+    statusColor = '#2563eb';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M3 12h18"></path><path d="m8 7-5 5 5 5"></path></svg>;
   } else if (s === 'RTO') {
     statusText = 'Return';
+    statusColor = '#b45309';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2"><path d="M3 12h18"></path><path d="m8 7-5 5 5 5"></path></svg>;
   } else if (isFailed) {
     statusText = order.paymentStatus === 'payment failed' ? 'Payment Failed' : 'Cancelled';
+    statusColor = '#dc2626';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
   } else if (s === 'FAILED') {
     statusText = 'Failed';
+    statusColor = '#dc2626';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
   } else if (s === 'CANCELLED') {
     statusText = 'Cancelled';
+    statusColor = '#dc2626';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>;
   } else if (s === 'CONFIRMED') {
     statusText = 'Confirmed';
+    statusColor = '#16a34a';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><path d="M20 6 9 17l-5-5"></path></svg>;
   } else if (s === 'NEW' || s === 'DRAFT') {
     statusText = 'Placed';
+    statusColor = '#d97706';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
   } else if (isSuccess) {
     statusText = 'Delivered';
+    statusColor = '#059669';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
   } else if (isTransit) {
     statusText = 'Confirmed';
+    statusColor = '#2563eb';
     StatusIcon = <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>;
   }
 
@@ -163,8 +174,8 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
         onClick={() => setExpanded(!expanded)}
         style={{ cursor: 'pointer', padding: '16px', background: expanded ? '#f8fafc' : 'white', display: 'flex', flexDirection: 'column', gap: '12px', transition: 'background 0.2s' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flex: '1 1 220px', minWidth: 0 }}>
             <div style={{ 
               width: '40px', height: '40px', borderRadius: '10px', 
               background: isFailed ? '#fee2e2' : isSuccess ? '#dcfce7' : isTransit ? '#dbeafe' : '#fef3c7',
@@ -173,16 +184,18 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
             }}>
               {StatusIcon}
             </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{itemName}</h3>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', wordBreak: 'break-word', lineHeight: 1.35 }}>{itemName}</h3>
               <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '3px', fontWeight: 500 }}>
-                {statusText} • {dateStr}
+                <span style={{ color: statusColor, fontWeight: 700 }}>{statusText}</span>
+                {' • '}
+                <span style={{ color: '#64748b' }}>{dateStr}</span>
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem', display: 'flex', alignItems: 'center' }}>
-              <span style={{ opacity: 0.6, fontSize: '0.7rem', marginRight: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Amount:</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flex: '0 0 auto', marginLeft: 'auto' }}>
+            <span style={{ fontWeight: 800, color: '#166534', fontSize: '1rem', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+              <span style={{ opacity: 0.75, fontSize: '0.7rem', marginRight: '6px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b' }}>Amount:</span>
               ₹{order.totalAmount}
             </span>
           </div>
@@ -244,9 +257,9 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
                   <span style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.9rem' }}>{item.quantity}x</span>
                   <span style={{ color: '#475569', fontSize: '0.9rem', lineHeight: '1.35', wordBreak: 'break-word', whiteSpace: 'normal' }}>{item.productId?.name || 'Product'}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
                   <span style={{ opacity: 0.6, fontSize: '0.65rem', marginRight: '4px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 800 }}>Amount:</span>
-                  <span style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.9rem' }}>₹{item.price * item.quantity}</span>
+                  <span style={{ color: '#1d4ed8', fontWeight: 700, fontSize: '0.9rem' }}>₹{item.price * item.quantity}</span>
                 </div>
               </div>
             ))}
@@ -269,8 +282,8 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
               </div>
 
               <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-                <div style={{ color: '#0f172a', fontSize: '0.78rem', fontWeight: 700 }}>
-                  Total <span style={{ color: '#2563eb', fontWeight: 800 }}>₹{order.totalAmount}</span>
+                <div style={{ color: '#334155', fontSize: '0.78rem', fontWeight: 700 }}>
+                  Total <span style={{ color: '#166534', fontWeight: 800 }}>₹{order.totalAmount}</span>
                 </div>
                 {isPartialOrder ? (
                   <>
