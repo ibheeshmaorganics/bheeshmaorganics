@@ -171,15 +171,17 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const handleFocus = () => {
+      if (document.hidden) return;
       const latestLocalCart = readCart();
       setCartItems(latestLocalCart);
       void syncCartWithLatestProducts(latestLocalCart);
     };
 
     const interval = window.setInterval(() => {
+      if (document.hidden) return;
       const latestLocalCart = readCart();
       void syncCartWithLatestProducts(latestLocalCart);
-    }, 30000);
+    }, 5000);
 
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleFocus);
