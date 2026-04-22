@@ -18,6 +18,8 @@ interface Product { _id: string; name: string; category: string; price: number; 
 export default function ClientProductGrid({ products: initialProducts }: { products: Product[] }) {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const desktopHeroBg = 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/shop_hero_bg';
+  const mobileHeroBg = 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto,c_fill,ar_9:16,g_auto/v1/images/shop_hero_bg';
 
   useEffect(() => {
     // Aggressively pre-warm all product destination pages natively into background memory instantly 
@@ -135,7 +137,22 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
         justifyContent: 'center',
         minHeight: '40vh'
       }}>
-        <Image src="https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/shop_hero_bg" alt="Shop Hero Background" fill sizes="100vw" style={{ objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }} />
+        <Image
+          src={desktopHeroBg}
+          alt="Shop Hero Background"
+          fill
+          sizes="100vw"
+          className="heroBgDesktop"
+          style={{ objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }}
+        />
+        <Image
+          src={mobileHeroBg}
+          alt="Shop Hero Background Mobile"
+          fill
+          sizes="100vw"
+          className="heroBgMobile"
+          style={{ objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }}
+        />
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(16, 42, 28, 0.5)', zIndex: 1 }}></div>
         <div
           className="container"
@@ -153,6 +170,8 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.65rem;
           }
+          .heroBgDesktop { display: block; }
+          .heroBgMobile { display: none; }
           .productCard {
             background: white;
             border-radius: 14px;
@@ -198,6 +217,8 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
             .productContent { padding: 0.55rem; }
           }
           @media (max-width: 768px) {
+            .heroBgDesktop { display: none; }
+            .heroBgMobile { display: block; }
             .variantRow { display: none; }
           }
           @media (min-width: 640px) {
