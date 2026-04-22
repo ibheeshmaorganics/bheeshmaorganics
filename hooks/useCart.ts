@@ -64,7 +64,10 @@ export function useCart() {
             ? String(item.productIdOriginal)
             : getBaseProductId(String(item._id || ''));
           const latestProduct = productMap.get(baseProductId);
-          if (!latestProduct) return item;
+          if (!latestProduct) {
+            changed = true;
+            return null;
+          }
 
           const selectedSize = getVariantSizeFromCartId(String(item._id || ''));
           const updatedName = selectedSize ? `${latestProduct.name} - ${selectedSize}` : latestProduct.name;
@@ -84,6 +87,7 @@ export function useCart() {
           }
           return updatedItem;
         })
+        .filter((item): item is CartItem => Boolean(item))
         .filter((item) => (Number(item.price) || 0) > 0);
 
       if (changed) {
@@ -104,7 +108,7 @@ export function useCart() {
       void syncWithLatestProducts(latestLocal);
     };
 
-    const interval = window.setInterval(refresh, 30000);
+    const interval = window.setInterval(refresh, 5000);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
 
@@ -115,25 +119,27 @@ export function useCart() {
     };
   }, [syncWithLatestProducts]);
 
-  const syncCart = (items: CartItem[]) => {
+  const syncCart = useCallback((items: CartItem[]) => {
     setCart(items);
     writeCart(items);
     void syncWithLatestProducts(items);
-  };
+  }, [syncWithLatestProducts]);
 
-  const clearCartState = () => {
+  const clearCartState = useCallback(() => {
     setCart([]);
     clearCart();
-  };
+  }, []);
+
+  const refreshCartWithLatest = useCallback(async () => {
+    const latestLocal = readCart();
+    setCart(latestLocal);
+    return syncWithLatestProducts(latestLocal);
+  }, [syncWithLatestProducts]);
 
   return {
     cart,
     syncCart,
     clearCartState,
-    refreshCartWithLatest: async () => {
-      const latestLocal = readCart();
-      setCart(latestLocal);
-      return syncWithLatestProducts(latestLocal);
-    },
+    refreshCartWithLatest,
   };
 }

@@ -125,7 +125,10 @@ export default function CheckoutPage() {
             ? String(item.productIdOriginal)
             : getBaseProductId(String(item._id || ''));
           const latestProduct = productMap.get(baseProductId);
-          if (!latestProduct) return item;
+          if (!latestProduct) {
+            hasChanges = true;
+            return null;
+          }
 
           const latestPrice = resolveLatestPrice(latestProduct, String(item._id || ''));
           const selectedSize = getVariantSizeFromCartId(String(item._id || ''));
@@ -145,6 +148,7 @@ export default function CheckoutPage() {
           }
           return updatedItem;
         })
+        .filter((item): item is CartItem => Boolean(item))
         .filter((item) => (Number(item.price) || 0) > 0);
 
       if (hasChanges) {

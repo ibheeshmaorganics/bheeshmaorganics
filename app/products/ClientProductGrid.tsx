@@ -18,6 +18,7 @@ interface Product { _id: string; name: string; category: string; price: number; 
 export default function ClientProductGrid({ products: initialProducts }: { products: Product[] }) {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>(initialProducts);
+  const { cart, syncCart, refreshCartWithLatest } = useCart();
   const desktopHeroBg = 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/shop_hero_bg';
   const mobileHeroBg = 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto,c_fill,ar_9:16,g_auto/v1/images/shop_hero_bg';
 
@@ -44,6 +45,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
             discount: p.discount || 0,
             images: p.images || []
           })));
+          void refreshCartWithLatest();
         }
       } catch {
         // Silently ignore network errors to keep the UI smooth
@@ -58,7 +60,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
 
     const interval = setInterval(async () => {
       await refreshProducts();
-    }, 30000);
+    }, 5000);
 
     document.addEventListener('visibilitychange', handleVisibility);
 
@@ -66,7 +68,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, []);
+  }, [refreshCartWithLatest]);
 
   const ITEMS_PER_LOAD = 12;
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_LOAD);
@@ -86,7 +88,6 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
     return () => window.removeEventListener('scroll', handleScroll);
   }, [products.length, visibleCount]);
 
-  const { cart, syncCart } = useCart();
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({});
 
   const updateCart = (newCart: CartItem[]) => {

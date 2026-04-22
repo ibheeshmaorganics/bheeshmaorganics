@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './Navbar.module.css';
-import { readCart, getCartCount } from '@/lib/cart';
+import { readCart, getCartCount, CART_UPDATED_EVENT } from '@/lib/cart';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -25,6 +25,7 @@ export default function Navbar() {
     };
     const handleWindowFocus = () => updateCount();
     const handleStorage = () => updateCount();
+    const handleCartUpdated = () => updateCount();
 
     updateCount();
     const interval = setInterval(() => {
@@ -33,6 +34,7 @@ export default function Navbar() {
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleWindowFocus);
     window.addEventListener('storage', handleStorage);
+    window.addEventListener(CART_UPDATED_EVENT, handleCartUpdated);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -40,6 +42,7 @@ export default function Navbar() {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('storage', handleStorage);
+      window.removeEventListener(CART_UPDATED_EVENT, handleCartUpdated);
     };
   }, []);
 

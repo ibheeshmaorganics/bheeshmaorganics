@@ -1,4 +1,5 @@
 export const CART_STORAGE_KEY = 'bheeshma_cart';
+export const CART_UPDATED_EVENT = 'bheeshma-cart-updated';
 
 export type CartItem = {
   _id: string;
@@ -12,6 +13,11 @@ export type CartItem = {
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined';
+}
+
+function notifyCartUpdated(): void {
+  if (!isBrowser()) return;
+  window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
 }
 
 export function readCart(): CartItem[] {
@@ -29,11 +35,13 @@ export function readCart(): CartItem[] {
 export function writeCart(items: CartItem[]): void {
   if (!isBrowser()) return;
   localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  notifyCartUpdated();
 }
 
 export function clearCart(): void {
   if (!isBrowser()) return;
   localStorage.removeItem(CART_STORAGE_KEY);
+  notifyCartUpdated();
 }
 
 export function getCartCount(items: CartItem[]): number {
