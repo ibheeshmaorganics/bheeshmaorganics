@@ -218,6 +218,18 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const normalizedSearch = orderSearch.trim();
+    if (!normalizedSearch) return;
+
+    const autoClearTimer = window.setTimeout(() => {
+      setOrderSearch('');
+      setOrderPage(1);
+    }, 30000);
+
+    return () => window.clearTimeout(autoClearTimer);
+  }, [orderSearch]);
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
