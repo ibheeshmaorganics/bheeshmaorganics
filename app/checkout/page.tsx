@@ -634,7 +634,7 @@ export default function CheckoutPage() {
                      animation: 'spin 1s linear infinite' 
                    }}></div>
                    <span style={{ color: '#334155', fontWeight: '700', letterSpacing: '0.5px', fontSize: '0.95rem' }}>
-                     Routing securely...
+                      order status...
                    </span>
                 </div>
               </div>

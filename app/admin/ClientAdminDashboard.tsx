@@ -987,18 +987,18 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         Customer Identity
       </h4>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</label>
-          <input required type="text" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.customerName} onChange={e => setEditingOrder({ ...editingOrder, customerName: e.target.value })} />
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</label>
+          <input required type="text" placeholder="Full Name" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.9rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.customerName} onChange={e => setEditingOrder({ ...editingOrder, customerName: e.target.value })} />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</label>
-          <input required type="text" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.phone} onChange={e => setEditingOrder({ ...editingOrder, phone: e.target.value })} />
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Mobile Number</label>
+          <input required type="text" placeholder="Mobile Number" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.9rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.phone} onChange={e => setEditingOrder({ ...editingOrder, phone: e.target.value })} />
         </div>
-        <div>
-          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</label>
-          <input required type="email" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.85rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.email} onChange={e => setEditingOrder({ ...editingOrder, email: e.target.value })} />
+        <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</label>
+          <input required type="email" placeholder="Email Address" style={{ background: '#f8fafc', margin: 0, width: '100%', padding: '10px 12px', fontSize: '0.9rem', borderRadius: '4px', border: '1px solid #cbd5e1', color: '#0f172a', outline: 'none', fontWeight: 500 }} value={editingOrder.email} onChange={e => setEditingOrder({ ...editingOrder, email: e.target.value })} />
         </div>
       </div>
     </div>
