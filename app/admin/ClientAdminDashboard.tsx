@@ -69,6 +69,14 @@ function getRefundPaymentChipDisplay(o: Order): { label: string; variant: 'paid'
   return { label: o.paymentStatus || 'pending', variant: 'pending' };
 }
 
+function formatOrderDisplayId(order: Pick<Order, '_id' | 'shortOrderId'>): string {
+  const normalizedShortId = String(order.shortOrderId || '').replace(/\s+/g, '').toUpperCase();
+  if (normalizedShortId) {
+    return normalizedShortId.replace(/^BO-/i, '');
+  }
+  return order._id.slice(-6).toUpperCase();
+}
+
 export default function ClientAdminDashboard({ initialProducts, initialOrders, initialVisitors = [] }: any) {
   const router = useRouter();
   const [activeTab, setActiveTabState] = useState('dashboard');
@@ -89,6 +97,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
   const [orderSearch, setOrderSearch] = useState('');
   const [orderPage, setOrderPage] = useState(1);
   const [orderFilterTab, setOrderFilterTab] = useState('NEW');
+  const [preSearchOrderFilterTab, setPreSearchOrderFilterTab] = useState<string | null>(null);
   const [refundsSubTab, setRefundsSubTab] = useState<RefundsSubTabKey>('need_refund');
   const [refundSearch, setRefundSearch] = useState('');
   const [refundPage, setRefundPage] = useState(1);
@@ -225,10 +234,14 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     const autoClearTimer = window.setTimeout(() => {
       setOrderSearch('');
       setOrderPage(1);
+      if (preSearchOrderFilterTab) {
+        setOrderFilterTab(preSearchOrderFilterTab);
+      }
+      setPreSearchOrderFilterTab(null);
     }, 30000);
 
     return () => window.clearTimeout(autoClearTimer);
-  }, [orderSearch]);
+  }, [orderSearch, preSearchOrderFilterTab]);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -421,7 +434,15 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     }
     const normalizedPhone = phoneDigits.length === 10 ? `91${phoneDigits}` : phoneDigits;
     const items = (order.products || [])
-      .map((item: any) => `- ${item?.productId?.name || 'Product'} x${item?.quantity || 1}`)
+      .map((item: any) => {
+        const productName =
+          item?.productId?.name ||
+          item?.name ||
+          (typeof item?.productId === 'string' ? `Product ${item.productId.slice(-6).toUpperCase()}` : 'Product');
+        const quantity = Number(item?.quantity) > 0 ? Number(item.quantity) : 1;
+        const lineAmount = Number(item?.price) > 0 ? ` - ₹${Number(item.price) * quantity}` : '';
+        return `- ${productName} x${quantity}${lineAmount}`;
+      })
       .join('\n');
     const address = order.address && typeof order.address === 'object'
       ? [order.address.street, order.address.city, order.address.state, order.address.pinCode].filter(Boolean).join(', ')
@@ -429,7 +450,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     const message = [
       `Hi ${order.customerName},`,
       '',
-      `This is Bheeshma Organics confirming your order #${(order.shortOrderId || order._id.slice(-6).toUpperCase())}.`,
+      `This is Bheeshma Organics confirming your order ${formatOrderDisplayId(order)}.`,
       '',
       'Order details:',
       items || '- Product details unavailable',
@@ -922,7 +943,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                 {isEditingOrder && editingOrder ? (
                   <div className={styles.editOrderCard} style={{ color: '#1e293b', background: '#fff', padding: '1rem', borderRadius: '4px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#1e293b' }}>Edit Order: #{editingOrder.shortOrderId || editingOrder._id.slice(-6).toUpperCase()}</h3>
+                      <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#1e293b' }}>Edit Order: {formatOrderDisplayId(editingOrder)}</h3>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         {(editingOrder.status || '').toUpperCase() === 'NEW' && (
                           <button
@@ -1405,7 +1426,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                           return (
                             <button
                               key={t}
-                              onClick={() => { setOrderFilterTab(t); setOrderPage(1); setSelectedOrders(new Set()); setOrderSearch(''); }}
+                              onClick={() => { setOrderFilterTab(t); setOrderPage(1); setSelectedOrders(new Set()); setOrderSearch(''); setPreSearchOrderFilterTab(null); }}
                               style={{
                                 padding: '8px 16px',
                                 fontWeight: 600,
@@ -1442,6 +1463,16 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                               setOrderPage(1); 
                               
                               const searchLower = val.toLowerCase().replace(/#/g, '').trim();
+                              if (searchLower !== '' && preSearchOrderFilterTab === null) {
+                                setPreSearchOrderFilterTab(orderFilterTab);
+                              }
+                              if (searchLower === '') {
+                                if (preSearchOrderFilterTab) {
+                                  setOrderFilterTab(preSearchOrderFilterTab);
+                                }
+                                setPreSearchOrderFilterTab(null);
+                                return;
+                              }
                               if (searchLower !== '') {
                                 const matchingOrders = orders.filter(o => 
                                    o._id.toLowerCase().includes(searchLower) || 
@@ -1566,7 +1597,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                       title={blockSelection ? "Cannot ship: Payment not successfully captured" : ""}
                                     />
                                   </td>
-                                  <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>#{o.shortOrderId || o._id.slice(-6).toUpperCase()}</td>
+                                  <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>{formatOrderDisplayId(o)}</td>
                                   <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                                     <strong>{o.customerName}</strong><br />
                                     <span style={{ color: 'var(--color-text-light)', fontSize: '0.6rem' }}>{o.phone}</span>
@@ -1972,7 +2003,7 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                             { color: '#92400e', background: '#fef3c7' };
                           return (
                           <tr key={o._id}>
-                            <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>#{o.shortOrderId || o._id.slice(-6).toUpperCase()}</td>
+                            <td style={{ fontWeight: 600, padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>{formatOrderDisplayId(o)}</td>
                             <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0' }}>
                               <strong>{o.customerName}</strong><br />
                               <span style={{ color: 'var(--color-text-light)', fontSize: '0.6rem' }}>{o.phone}</span>

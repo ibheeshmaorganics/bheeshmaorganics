@@ -327,7 +327,7 @@ export default function ClientProductView({ product }: { product: ProductDetails
           border-top: 2px dashed #f1f5f9;
         }
         .bo-descriptionBox p {
-          color: #475569;
+          color: #000000;
           line-height: 1.8;
           font-size: 1.15rem;
           white-space: pre-wrap;
@@ -512,7 +512,7 @@ export default function ClientProductView({ product }: { product: ProductDetails
             <div className={styles.badge}>100% Organic</div>
             <h1 className={styles.title} style={{ wordWrap: 'break-word', overflowWrap: 'break-word', hyphens: 'auto' }}>{product.name}</h1>
             {product.subHeading && (
-              <p style={{ marginTop: '8px', color: '#475569', fontSize: '1rem', fontWeight: 500, lineHeight: 1.5 }}>
+              <p style={{ marginTop: '8px', color: '#000000', fontSize: '1rem', fontWeight: 500, lineHeight: 1.5 }}>
                 {product.subHeading}
               </p>
             )}

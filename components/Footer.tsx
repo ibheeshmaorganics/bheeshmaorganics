@@ -54,6 +54,19 @@ export default function Footer() {
             </div>
           </div>
         </div>
+
+        <div className={styles.section}>
+          <h4 className={styles.heading}>We accept</h4>
+          <div className={styles.paymentGrid}>
+            <span className={`${styles.paymentChip} ${styles.visaText}`}>VISA</span>
+            <span className={`${styles.paymentChip} ${styles.mastercardText}`}>Mastercard</span>
+            <span className={`${styles.paymentChip} ${styles.gpayText}`}>GPay</span>
+            <span className={`${styles.paymentChip} ${styles.upiText}`}>BHIM UPI</span>
+            <span className={`${styles.paymentChip} ${styles.netBankingText}`}>Net Banking</span>
+            <span className={`${styles.paymentChip} ${styles.walletsText}`}>Wallets</span>
+            <span className={`${styles.paymentChip} ${styles.paymentChipWide} ${styles.codText}`}>Cash on Delivery</span>
+          </div>
+        </div>
       </div>
       <div className={styles.bottomBar}>
         <p>&copy; {new Date().getFullYear()} Bheeshma Organics. All rights reserved.</p>

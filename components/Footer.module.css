@@ -89,6 +89,60 @@
   gap: 0.3rem;
 }
 
+.paymentGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.paymentChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  padding: 0.45rem 0.8rem;
+  min-height: 32px;
+}
+
+.visaText {
+  color: #1d4ed8;
+}
+
+.mastercardText {
+  color: #dc2626;
+}
+
+.gpayText {
+  color: #4338ca;
+}
+
+.upiText {
+  color: #166534;
+}
+
+.netBankingText {
+  color: #0f766e;
+}
+
+.walletsText {
+  color: #7c3aed;
+}
+
+.codText {
+  color: #b45309;
+}
+
+.paymentChipWide {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
 @media (max-width: 450px) {
   .sideBySide {
     gap: 0.75rem;
@@ -98,5 +152,9 @@
   }
   .heading {
     font-size: 1rem;
+  }
+  .paymentChip {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.7rem;
   }
 }

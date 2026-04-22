@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Marquee from 'react-fast-marquee';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { ShieldCheck, BadgeCheck, MapPinned, Truck } from 'lucide-react';
 import styles from './page.module.css';
 
 const fadeUp: any = {
@@ -27,6 +28,12 @@ const scaleIn: any = {
 
 export default function Home() {
   const router = useRouter();
+  const trustHighlights = [
+    { icon: ShieldCheck, label: 'Secure Payments' },
+    { icon: BadgeCheck, label: 'Assured Quality' },
+    { icon: MapPinned, label: 'Made In India' },
+    { icon: Truck, label: 'Timely Delivery' },
+  ] as const;
 
   useEffect(() => {
     // Aggressively prefetch the products page right away so it instantly renders
@@ -114,31 +121,12 @@ export default function Home() {
               </a>
             </div>
 
-            <p className={styles.platformEyebrow}>Now Available Online</p>
-            <h2 className={styles.platformHeading}>Shop with confidence on trusted marketplaces</h2>
+            <p className={styles.platformEyebrow}>Also available on</p>
             <p className={styles.platformSub}>
               Bheeshma Organics is now available on Amazon and Flipkart for easy ordering, secure payments, and reliable delivery.
               Explore our official listings and buy with trust.
             </p>
 
-            <div className={styles.platformActionRow}>
-              <a
-                href="https://www.amazon.in/stores/BHEESHMAORGANICS/page/9E599402-C004-44CE-AD94-F92B6CE1B68A?lp_context_asin=B0GPQTGS4S&ref_=cm_sw_r_apann_ast_store_74NN36C7C6B899KEPKJB&dplnk=Y&dplnkId=f4420508-c96c-4c8a-9f98-1eddb62f7e98"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.platformActionAmazon}
-              >
-                Visit Amazon Store
-              </a>
-              <a
-                href="https://dl.flipkart.com/dl/bheeshma-organics-himalayan-sea-buckthorn-pulp-concentrate/p/itm845870d47a9f3?pid=DAJHHHHZF5XWGMQF&lid=LSTDAJHHHHZF5XWGMQFEKEQRZ&hl_lid=&marketplace=FLIPKART&fm=eyJ3dHAiOiJhdGxhc19wcm9kdWN0X3N1bW1hcnlfZ3JpZF9iZWF1dHkiLCJwcnB0Ijoic3AiLCJtaWQiOiJhZHMifQ=="
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.platformActionFlipkart}
-              >
-                View on Flipkart
-              </a>
-            </div>
           </div>
         </div>
       </section>
@@ -253,6 +241,25 @@ export default function Home() {
                 ))}
               </Marquee>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Highlights Section */}
+      <section className={styles.trustSection}>
+        <div className="container">
+          <div className={styles.trustGrid}>
+            {trustHighlights.map((item) => {
+              const Icon = item.icon;
+              return (
+              <div key={item.label} className={styles.trustCard}>
+                <span className={styles.trustIcon} aria-hidden="true">
+                  <Icon size={28} strokeWidth={2.2} />
+                </span>
+                <h3 className={styles.trustLabel}>{item.label}</h3>
+              </div>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -7,6 +7,14 @@ import styles from './page.module.css';
 
 interface Order { _id: string; shortOrderId?: string; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; refundStatus?: string; refundFailureReason?: string; refundInitiatedAt?: string; refundCompletedAt?: string; refundTimeline?: any[]; transactionSummary?: any; address: any; products: any[]; }
 
+function formatOrderDisplayId(order: Pick<Order, '_id' | 'shortOrderId'>): string {
+  const normalizedShortId = String(order.shortOrderId || '').replace(/\s+/g, '').toUpperCase();
+  if (normalizedShortId) {
+    return normalizedShortId.replace(/^BO-/i, '');
+  }
+  return order._id.slice(-6).toUpperCase();
+}
+
 function OrderTrackingTimeline({ status, isFailed }: { status: string, isFailed: boolean }) {
   if (isFailed) return null; // Don't show happy path timeline for failed orders
 
@@ -103,7 +111,7 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
   const dateStr = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(order.createdAt));
   const mainProduct = order.products && order.products[0];
   const moreItems = order.products ? order.products.length - 1 : 0;
-  const itemName = mainProduct ? `${mainProduct.productId?.name || 'Product'} ${moreItems > 0 ? `+${moreItems}` : ''}` : `Order #${order.shortOrderId || order._id.slice(-6).toUpperCase()}`;
+  const itemName = mainProduct ? `${mainProduct.productId?.name || 'Product'} ${moreItems > 0 ? `+${moreItems}` : ''}` : `Order ${formatOrderDisplayId(order)}`;
   const addr = (order.address && typeof order.address === 'object') ? order.address : {};
   const addressLine1 = String(addr.street || addr.line1 || addr.address || addr.village || '').trim();
   const addressLine2 = [addr.area, addr.landmark].filter(Boolean).join(', ');
@@ -212,7 +220,7 @@ function OrderItem({ order, idx }: { order: Order; idx: number }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div>
               <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#64748b', fontWeight: 700, letterSpacing: '0.5px' }}>Order ID</span>
-              <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>#{order.shortOrderId || order._id.slice(-6).toUpperCase()}</div>
+              <div style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>{formatOrderDisplayId(order)}</div>
             </div>
             {(order.awbCode || order.trackingLink) && (
               <div style={{ textAlign: 'right' }}>
