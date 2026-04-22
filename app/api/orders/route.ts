@@ -138,7 +138,34 @@ export async function GET(req: NextRequest) {
     verifyAdminRequest(req);
     const orders = await prisma.order.findMany({ 
       where: { paymentStatus: { not: 'draft_intent' } },
-      orderBy: { createdAt: 'desc' } 
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        shortOrderId: true,
+        customerName: true,
+        phone: true,
+        email: true,
+        address: true,
+        products: true,
+        totalAmount: true,
+        status: true,
+        paymentId: true,
+        razorpayOrderId: true,
+        shiprocketOrderId: true,
+        awbCode: true,
+        createdAt: true,
+        paymentMethod: true,
+        courierName: true,
+        trackingLink: true,
+        paymentStatus: true,
+        transactionSummary: true,
+        refundId: true,
+        refundStatus: true,
+        refundFailureReason: true,
+        refundInitiatedAt: true,
+        refundCompletedAt: true,
+        refundTimeline: true,
+      }
     });
     const products = await prisma.product.findMany({ select: { id: true, name: true } });
     const productMap = createProductMap(products);

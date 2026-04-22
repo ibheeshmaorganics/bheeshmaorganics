@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { getShiprocketToken } from '@/lib/server/shiprocket-auth';
 
 export async function POST(req: Request) {
   try {
@@ -9,24 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No order provided' }, { status: 400 });
     }
 
-    const email = process.env.SHIPROCKET_EMAIL;
-    const password = process.env.SHIPROCKET_PASSWORD;
-
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Shiprocket credentials missing from server environment' }, { status: 500 });
-    }
-
-    // 1. Authenticate with Shiprocket automatically
-    const authRes = await fetch('https://apiv2.shiprocket.in/v1/external/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const authData = await authRes.json();
-    if (!authRes.ok || !authData.token) {
-      throw new Error(`Shiprocket Auth Failed: ${authData.message || 'Invalid config'}`);
-    }
-    const token = authData.token;
+    const token = await getShiprocketToken();
 
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });

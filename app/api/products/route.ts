@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/db';
 import { v2 as cloudinary } from 'cloudinary';
 import { verifyAdminRequest } from '@/lib/server/auth';
+import { revalidatePath } from 'next/cache';
 
 // Initialize Cloudinary
 cloudinary.config({
@@ -22,6 +23,13 @@ export async function GET() {
   }
 }
 
+function optimizeCloudinaryDeliveryUrl(url: string): string {
+  if (!url.includes('res.cloudinary.com') || url.includes('/upload/f_auto,q_auto/')) {
+    return url;
+  }
+  return url.replace('/upload/', '/upload/f_auto,q_auto/');
+}
+
 export async function POST(req: NextRequest) {
   try {
     verifyAdminRequest(req);
@@ -33,9 +41,9 @@ export async function POST(req: NextRequest) {
       for (const img of body.images) {
         if (img.startsWith('data:image')) {
           const uploadResponse = await cloudinary.uploader.upload(img, { folder: 'bheeshma_products' });
-          uploadedImages.push(uploadResponse.secure_url);
+          uploadedImages.push(optimizeCloudinaryDeliveryUrl(uploadResponse.secure_url));
         } else {
-          uploadedImages.push(img);
+          uploadedImages.push(optimizeCloudinaryDeliveryUrl(img));
         }
       }
       body.images = uploadedImages;
@@ -46,6 +54,7 @@ export async function POST(req: NextRequest) {
     if (body.quantity) body.quantity = Number(body.quantity);
 
     const product = await prisma.product.create({ data: body });
+    revalidatePath('/products');
     return NextResponse.json({ product: { ...product, _id: product.id } }, { status: 201 });
   } catch (err) {
     console.error('Product POST err:', err);
@@ -65,9 +74,9 @@ export async function PUT(req: NextRequest) {
       for (const img of updateData.images) {
         if (img.startsWith('data:image')) {
           const uploadResponse = await cloudinary.uploader.upload(img, { folder: 'bheeshma_products' });
-          uploadedImages.push(uploadResponse.secure_url);
+          uploadedImages.push(optimizeCloudinaryDeliveryUrl(uploadResponse.secure_url));
         } else {
-          uploadedImages.push(img);
+          uploadedImages.push(optimizeCloudinaryDeliveryUrl(img));
         }
       }
       updateData.images = uploadedImages;
@@ -78,6 +87,8 @@ export async function PUT(req: NextRequest) {
     if (updateData.quantity) updateData.quantity = Number(updateData.quantity);
 
     const updated = await prisma.product.update({ where: { id: targetId }, data: updateData });
+    revalidatePath('/products');
+    revalidatePath(`/products/${targetId}`);
     return NextResponse.json({ product: { ...updated, _id: updated.id } });
   } catch (err) {
     console.error('Product PUT err:', err);
@@ -92,6 +103,8 @@ export async function DELETE(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'Missing product ID' }, { status: 400 });
 
     await prisma.product.delete({ where: { id } });
+    revalidatePath('/products');
+    revalidatePath(`/products/${id}`);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Deletion failed' }, { status: 400 });

@@ -439,10 +439,24 @@ function TrackContent() {
   useEffect(() => {
     const activeQuery = query.trim();
     if (!activeQuery || orders.length === 0) return;
-    const timer = window.setInterval(() => {
-      fetchOrders(activeQuery, { silent: true });
-    }, 15000);
-    return () => window.clearInterval(timer);
+
+    const poll = () => {
+      if (!document.hidden) {
+        void fetchOrders(activeQuery, { silent: true });
+      }
+    };
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void fetchOrders(activeQuery, { silent: true });
+      }
+    };
+
+    const timer = window.setInterval(poll, 30000);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [query, orders.length]);
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import prisma from '@/lib/db';
-import Razorpay from 'razorpay';
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,34 +54,28 @@ export async function POST(req: NextRequest) {
     // Handle Payment Failure
     if (event.event === 'payment.failed') {
       const razorpayOrderId = event.payload.payment.entity.order_id;
-      
       try {
-        const razorpay = new Razorpay({
-          key_id: process.env.RAZORPAY_KEY_ID,
-          key_secret: process.env.RAZORPAY_KEY_SECRET,
+        const matchedOrders = await prisma.order.findMany({
+          where: { razorpayOrderId },
+          select: { id: true, paymentMethod: true }
         });
-        
-        const rzpOrder = await razorpay.orders.fetch(razorpayOrderId);
-        const dbOrderId = rzpOrder.receipt;
-        
-        if (dbOrderId) {
-          const dbOrder = await prisma.order.findUnique({ where: { id: dbOrderId } });
-          const method = (dbOrder?.paymentMethod || '').toLowerCase();
-          const isCod = method === 'cash' || method === 'cod';
+        const nonCodOrderIds = matchedOrders
+          .filter((order) => {
+            const method = (order.paymentMethod || '').toLowerCase();
+            return method !== 'cash' && method !== 'cod';
+          })
+          .map((order) => order.id);
 
-          if (dbOrder && !isCod) {
-            await prisma.order.update({
-               where: { id: dbOrderId },
-               data: { paymentStatus: 'payment failed', status: 'FAILED' }
-            });
-            console.log(`[WEBHOOK] Order ${dbOrderId} marked as Payment Failed`);
-          } else if (dbOrder && isCod) {
-            console.warn(`[WEBHOOK] Ignored payment.failed for COD order ${dbOrderId}`);
-          }
+        if (nonCodOrderIds.length > 0) {
+          await prisma.order.updateMany({
+            where: { id: { in: nonCodOrderIds } },
+            data: { paymentStatus: 'payment failed', status: 'FAILED' }
+          });
+          console.log(`[WEBHOOK] Marked ${nonCodOrderIds.length} order(s) as payment failed`);
         }
       } catch (err: unknown) {
-         const webhookErr = err instanceof Error ? err.message : String(err);
-         console.error('[WEBHOOK] Failed to update payment failure for order log:', webhookErr);
+        const webhookErr = err instanceof Error ? err.message : String(err);
+        console.error('[WEBHOOK] Failed to update payment failure for order log:', webhookErr);
       }
     }
 

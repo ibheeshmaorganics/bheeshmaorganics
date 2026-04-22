@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, warning: 'No matching order found' }, { status: 200 });
     }
 
-    for (const order of matchedOrders) {
+    await Promise.all(matchedOrders.map(async (order) => {
       const existingMeta = order.shipmentMeta && typeof order.shipmentMeta === 'object' && !Array.isArray(order.shipmentMeta)
         ? (order.shipmentMeta as Record<string, unknown>)
         : {};
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
           data: { status: internalStatus }
         });
       }
-    }
+    }));
 
     console.log(`[EXTERNAL WEBHOOK] Successfully Synced to DB Status: ${internalStatus}`);
     return NextResponse.json({ success: true, message: 'AWB Synced' });

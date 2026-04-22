@@ -57,6 +57,15 @@ model Order {
   refundCompletedAt DateTime?
   refundTimeline    Json?
   shipmentMeta      Json?
+
+  @@index([createdAt], map: "idx_order_created_at")
+  @@index([paymentStatus, createdAt], map: "idx_order_payment_status_created_at")
+  @@index([status, createdAt], map: "idx_order_status_created_at")
+  @@index([paymentId], map: "idx_order_payment_id")
+  @@index([awbCode], map: "idx_order_awb_code")
+  @@index([shiprocketOrderId], map: "idx_order_shiprocket_order_id")
+  @@index([phone], map: "idx_order_phone")
+  @@index([email], map: "idx_order_email")
 }
 
 model Visitor {

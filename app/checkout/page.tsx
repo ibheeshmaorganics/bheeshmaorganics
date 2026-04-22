@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import styles from './page.module.css';
@@ -116,6 +117,13 @@ export default function CheckoutPage() {
   const handlePhoneChange = (value: string) => {
     const onlyDigits = value.replace(/\D/g, '').slice(0, 10);
     setFormData({ ...formData, phone: onlyDigits });
+  };
+
+  const optimizeCloudinaryDeliveryUrl = (url: string) => {
+    if (!url || !url.includes('res.cloudinary.com') || url.includes('/upload/f_auto,q_auto/')) {
+      return url;
+    }
+    return url.replace('/upload/', '/upload/f_auto,q_auto/');
   };
 
   const scrollToPaymentMethodView = () => {
@@ -332,7 +340,13 @@ export default function CheckoutPage() {
               ) : (
                 cartItems.map((item, i) => (
                   <div key={i} className={styles.cartItem}>
-                    <img src={item.imageUrl || (item.images && item.images[0]) || '🌿'} alt={item.name} className={styles.itemImage} />
+                    <Image
+                      src={optimizeCloudinaryDeliveryUrl(item.imageUrl || (item.images && item.images[0]) || 'data:image/gif;base64,R0lGODlhAQABAAAAACw=')}
+                      alt={item.name}
+                      className={styles.itemImage}
+                      width={60}
+                      height={60}
+                    />
                     <div className={styles.itemDetails}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <h4 style={{ paddingRight: '15px' }}>{item.name}</h4>

@@ -3,7 +3,7 @@ import ClientProductView from './ClientProductView';
 import { type VariantOption } from '@/lib/product-variants';
 import { Prisma } from '@prisma/client';
 
-export const revalidate = 5;
+export const revalidate = 60;
 
 function normalizeVariants(variants: Prisma.JsonValue | null): VariantOption[] {
   if (!Array.isArray(variants)) {

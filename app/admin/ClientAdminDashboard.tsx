@@ -221,10 +221,25 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
   };
 
   useEffect(() => {
+    const runFetch = () => {
+      if (!document.hidden) {
+        void fetchData();
+      }
+    };
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void fetchData();
+      }
+    };
+
     const interval = setInterval(() => {
-      fetchData();
-    }, 10000);
-    return () => clearInterval(interval);
+      runFetch();
+    }, 30000);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   useEffect(() => {

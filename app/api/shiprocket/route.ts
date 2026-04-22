@@ -1,31 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-
-let shiprocketTokenCache: { token: string; expiresAt: number } | null = null;
-
-async function getShiprocketToken(email: string, password: string): Promise<string> {
-  const now = Date.now();
-  if (shiprocketTokenCache && shiprocketTokenCache.expiresAt > now) {
-    return shiprocketTokenCache.token;
-  }
-
-  const authRes = await fetch('https://apiv2.shiprocket.in/v1/external/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  const authData = await authRes.json();
-  if (!authRes.ok || !authData.token) {
-    throw new Error(`Shiprocket Auth Failed: ${authData.message || 'Invalid Email/Password configuration'}`);
-  }
-
-  // Keep a safety buffer so we refresh before token expiry.
-  shiprocketTokenCache = {
-    token: authData.token,
-    expiresAt: now + (9 * 60 * 1000)
-  };
-  return authData.token;
-}
+import { getShiprocketToken } from '@/lib/server/shiprocket-auth';
 
 export async function POST(req: Request) {
   try {
@@ -35,15 +10,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No orders provided' }, { status: 400 });
     }
 
-    const email = process.env.SHIPROCKET_EMAIL;
-    const password = process.env.SHIPROCKET_PASSWORD;
-
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Shiprocket credentials missing from server environment (.env feels empty)' }, { status: 500 });
-    }
-
     // 1. Reuse cached token when available.
-    const token = await getShiprocketToken(email, password);
+    const token = await getShiprocketToken();
 
     const generatedAWBs = [];
     const failedAWBs = [];

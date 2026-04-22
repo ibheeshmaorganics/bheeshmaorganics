@@ -58,6 +58,31 @@ export async function GET(req: NextRequest) {
         paymentStatus: { not: 'draft_intent' }
       },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        shortOrderId: true,
+        customerName: true,
+        phone: true,
+        email: true,
+        address: true,
+        products: true,
+        totalAmount: true,
+        status: true,
+        paymentId: true,
+        awbCode: true,
+        createdAt: true,
+        paymentMethod: true,
+        courierName: true,
+        trackingLink: true,
+        paymentStatus: true,
+        transactionSummary: true,
+        refundId: true,
+        refundStatus: true,
+        refundFailureReason: true,
+        refundInitiatedAt: true,
+        refundCompletedAt: true,
+        refundTimeline: true,
+      }
     });
 
     const populatedOrders = orders.map((order) => {

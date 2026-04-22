@@ -1,27 +1,13 @@
 import { NextResponse } from 'next/server';
+import { getShiprocketToken } from '@/lib/server/shiprocket-auth';
 
 export async function GET() {
   try {
-    const email = process.env.SHIPROCKET_EMAIL;
-    const password = process.env.SHIPROCKET_PASSWORD;
-
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Shiprocket credentials missing' }, { status: 500 });
-    }
-
-    const authRes = await fetch('https://apiv2.shiprocket.in/v1/external/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const authData = await authRes.json();
-    if (!authRes.ok || !authData.token) {
-      throw new Error('Auth Failed');
-    }
+    const token = await getShiprocketToken();
 
     const balanceRes = await fetch('https://apiv2.shiprocket.in/v1/external/account/details/wallet-balance', {
       method: 'GET',
-      headers: { 'Authorization': `Bearer ${authData.token}` }
+      headers: { 'Authorization': `Bearer ${token}` }
     });
     
     const balanceData = await balanceRes.json();

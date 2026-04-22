@@ -20,12 +20,26 @@ export default function Navbar() {
     const updateCount = () => {
       setCartCount(getCartCount(readCart()));
     };
+    const handleVisibility = () => {
+      if (!document.hidden) updateCount();
+    };
+    const handleWindowFocus = () => updateCount();
+    const handleStorage = () => updateCount();
+
     updateCount();
-    const interval = setInterval(updateCount, 1000); // 1-second poller for instantaneous updates globally
+    const interval = setInterval(() => {
+      if (!document.hidden) updateCount();
+    }, 5000);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('storage', handleStorage);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 

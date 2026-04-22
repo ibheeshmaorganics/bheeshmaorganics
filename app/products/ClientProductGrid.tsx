@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Toaster } from 'sonner';
 import { type CartItem } from '@/lib/cart';
@@ -28,13 +29,13 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
 
   // Background auto-fetching running continuously
   useEffect(() => {
-    const interval = setInterval(async () => {
+    const refreshProducts = async () => {
+      if (document.hidden) return;
       try {
         const res = await fetch('/api/products');
         const data = await res.json();
 
         if (data && data.products) {
-          // Compare strings or just set state, React avoids DOM repaints if data is structurally identical
           setProducts((data.products as Product[]).map((p) => ({
             ...p,
             category: '100% Organic',
@@ -45,9 +46,24 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
       } catch {
         // Silently ignore network errors to keep the UI smooth
       }
-    }, 5000); // live-fetches exactly every 5 seconds silently
+    };
 
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        void refreshProducts();
+      }
+    };
+
+    const interval = setInterval(async () => {
+      await refreshProducts();
+    }, 30000);
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const ITEMS_PER_LOAD = 12;
@@ -119,7 +135,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
         justifyContent: 'center',
         minHeight: '40vh'
       }}>
-        <img src="https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/shop_hero_bg" alt="Shop Hero Background" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }} />
+        <Image src="https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/shop_hero_bg" alt="Shop Hero Background" fill sizes="100vw" style={{ objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(16, 42, 28, 0.5)', zIndex: 1 }}></div>
         <div
           className="container"
