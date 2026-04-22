@@ -34,7 +34,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
     const refreshProducts = async () => {
       if (document.hidden) return;
       try {
-        const res = await fetch('/api/products');
+        const res = await fetch('/api/products', { cache: 'no-store' });
         const data = await res.json();
 
         if (data && data.products) {

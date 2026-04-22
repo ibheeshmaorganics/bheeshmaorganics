@@ -8,6 +8,20 @@ import { toast } from 'sonner';
 import styles from './page.module.css';
 import { readCart, writeCart, clearCart, type CartItem } from '@/lib/cart';
 
+type ProductVariant = { size: string; price: number };
+type ProductRecord = {
+  _id?: string;
+  id?: string;
+  name: string;
+  price: number;
+  discount?: number;
+  quantity?: number;
+  unit?: string;
+  images?: string[];
+  imageUrl?: string;
+  variants?: ProductVariant[];
+};
+
 type RazorpaySuccessResponse = {
   razorpay_payment_id: string;
   razorpay_order_id: string;
@@ -66,12 +80,111 @@ export default function CheckoutPage() {
     orderType: '',
   });
 
+  const getBaseProductId = (rawId: string) => rawId.slice(0, 36);
+
+  const getVariantSizeFromCartId = (rawId: string): string | null => {
+    if (!rawId || rawId.length <= 37) return null;
+    return rawId.slice(37);
+  };
+
+  const resolveLatestPrice = (product: ProductRecord, cartId: string) => {
+    const defaultSize = `${product.quantity || 1} ${product.unit || 'kg'}`;
+    const selectedSize = getVariantSizeFromCartId(cartId) || defaultSize;
+    const variants = [
+      { size: defaultSize, price: Number(product.price) || 0 },
+      ...((product.variants || []).map((variant) => ({
+        size: variant.size,
+        price: Number(variant.price) || 0
+      })))
+    ];
+    const matchedVariant = variants.find((variant) => variant.size === selectedSize) || variants[0];
+    const basePrice = Number(matchedVariant.price) || 0;
+    const discount = Number(product.discount) || 0;
+    return discount > 0 ? Math.round(basePrice - (basePrice * discount / 100)) : basePrice;
+  };
+
+  const syncCartWithLatestProducts = async (sourceItems: CartItem[]) => {
+    if (!sourceItems.length) return sourceItems;
+
+    try {
+      const res = await fetch('/api/products', { cache: 'no-store' });
+      if (!res.ok) return sourceItems;
+      const data = await res.json();
+      if (!data?.products || !Array.isArray(data.products)) return sourceItems;
+
+      const productMap = new Map<string, ProductRecord>();
+      (data.products as ProductRecord[]).forEach((product) => {
+        const pid = String(product._id || product.id || '');
+        if (pid) productMap.set(pid, product);
+      });
+
+      let hasChanges = false;
+      const syncedItems = sourceItems
+        .map((item) => {
+          const baseProductId = item.productIdOriginal
+            ? String(item.productIdOriginal)
+            : getBaseProductId(String(item._id || ''));
+          const latestProduct = productMap.get(baseProductId);
+          if (!latestProduct) return item;
+
+          const latestPrice = resolveLatestPrice(latestProduct, String(item._id || ''));
+          const selectedSize = getVariantSizeFromCartId(String(item._id || ''));
+          const latestName = selectedSize ? `${latestProduct.name} - ${selectedSize}` : latestProduct.name;
+          const latestImage = latestProduct.imageUrl || (latestProduct.images && latestProduct.images[0]) || item.imageUrl || '';
+
+          const updatedItem: CartItem = {
+            ...item,
+            name: latestName,
+            price: latestPrice,
+            imageUrl: latestImage,
+            images: latestProduct.images || item.images || [],
+          };
+
+          if (updatedItem.name !== item.name || updatedItem.price !== item.price || updatedItem.imageUrl !== item.imageUrl) {
+            hasChanges = true;
+          }
+          return updatedItem;
+        })
+        .filter((item) => (Number(item.price) || 0) > 0);
+
+      if (hasChanges) {
+        setCartItems(syncedItems);
+        writeCart(syncedItems);
+      }
+      return syncedItems;
+    } catch {
+      return sourceItems;
+    }
+  };
+
   useEffect(() => {
     const items = readCart();
     setCartItems(items);
+    void syncCartWithLatestProducts(items);
     router.prefetch('/products');
     router.prefetch('/track');
   }, [router]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      const latestLocalCart = readCart();
+      setCartItems(latestLocalCart);
+      void syncCartWithLatestProducts(latestLocalCart);
+    };
+
+    const interval = window.setInterval(() => {
+      const latestLocalCart = readCart();
+      void syncCartWithLatestProducts(latestLocalCart);
+    }, 30000);
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, []);
 
   const updateQuantity = (productId: string, delta: number) => {
     const newCart = [...cartItems];
@@ -148,8 +261,10 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const latestItems = await syncCartWithLatestProducts(readCart());
+    setCartItems(latestItems);
     setShowFieldErrors(true);
-    if (cartItems.length === 0) {
+    if (latestItems.length === 0) {
       toast.error('Your cart is empty! Please add products before checking out.');
       return router.push('/products');
     }
@@ -192,7 +307,7 @@ export default function CheckoutPage() {
             state: formData.state,
             pinCode: formData.pinCode,
           },
-          products: cartItems.map(item => ({
+          products: latestItems.map(item => ({
             productId: item._id,
             quantity: item.quantity,
             price: item.price,

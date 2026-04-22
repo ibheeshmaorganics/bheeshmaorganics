@@ -4,6 +4,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { verifyAdminRequest } from '@/lib/server/auth';
 import { revalidatePath } from 'next/cache';
 
+export const dynamic = 'force-dynamic';
+
 // Initialize Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -17,7 +19,10 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
     const formatted = products.map((p) => ({ ...p, _id: p.id }));
-    return NextResponse.json({ products: formatted });
+    return NextResponse.json(
+      { products: formatted },
+      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+    );
   } catch {
     return NextResponse.json({ error: 'DB Connection Error' }, { status: 500 });
   }
