@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import styles from './page.module.css';
 import { readCart, writeCart, clearCart, type CartItem } from '@/lib/cart';
+import { getFriendlyNetworkMessage, getFriendlyOrderError } from '@/lib/userFacingErrors';
 
 type ProductVariant = { size: string; price: number };
 type ProductRecord = {
@@ -287,6 +288,13 @@ export default function CheckoutPage() {
       scrollToPaymentMethodView();
       return;
     }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setShowPopup({
+        status: 'failed',
+        message: getFriendlyNetworkMessage(new Error('offline'))
+      });
+      return;
+    }
     setLoading(true);
 
     try {
@@ -300,9 +308,12 @@ export default function CheckoutPage() {
         });
       };
 
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           customerName: formData.customerName,
           phone: formData.phone,
@@ -324,8 +335,9 @@ export default function CheckoutPage() {
           orderType: formData.orderType
         })
       });
+      window.clearTimeout(timeoutId);
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         if (data.razorpayOrderId) {
           const resObj = await loadRazorpayCore();
@@ -392,12 +404,11 @@ export default function CheckoutPage() {
           setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
         }
       } else {
-        setShowPopup({status: 'failed', message: 'Order Failed: ' + data.error});
-        setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
+        const backendError = typeof data?.error === 'string' ? data.error : '';
+        setShowPopup({ status: 'failed', message: getFriendlyOrderError(backendError) });
       }
-    } catch {
-      setShowPopup({status: 'failed', message: 'Error connecting to secure backend servers.'});
-      setTimeout(() => router.replace(`/track?id=${formData.phone}`), 3000);
+    } catch (err: unknown) {
+      setShowPopup({ status: 'failed', message: getFriendlyNetworkMessage(err) });
     } finally {
       if (formData.orderType === 'COD') {
          setLoading(false);
@@ -758,6 +769,29 @@ export default function CheckoutPage() {
                       order status...
                    </span>
                 </div>
+                {showPopup.status === 'failed' && (
+                  <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPopup(null)}
+                      style={{
+                        border: 'none',
+                        background: '#0f766e',
+                        color: 'white',
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                        minHeight: '44px',
+                        padding: '10px 20px',
+                        borderRadius: '999px',
+                        cursor: 'pointer',
+                        width: '100%',
+                        maxWidth: '240px'
+                      }}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
               </div>
               <style dangerouslySetInnerHTML={{__html: "@keyframes spin { 100% { transform: rotate(360deg); } }"}} />
             </motion.div>

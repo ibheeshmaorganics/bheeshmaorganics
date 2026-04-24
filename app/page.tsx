@@ -26,6 +26,9 @@ const scaleIn: any = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.8, ease: "easeOut" } }
 };
 
+const PRODUCTS_HERO_DESKTOP_BG = 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/shop_hero_bg';
+const PRODUCTS_HERO_MOBILE_BG = 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto,c_fill,ar_9:16,g_auto/v1/images/shop_hero_bg';
+
 export default function Home() {
   const router = useRouter();
   const trustHighlights = [
@@ -38,6 +41,12 @@ export default function Home() {
   useEffect(() => {
     // Aggressively prefetch the products page right away so it instantly renders
     router.prefetch('/products');
+
+    // Warm Products hero backgrounds while user is on Home.
+    const desktopImg = new window.Image();
+    desktopImg.src = PRODUCTS_HERO_DESKTOP_BG;
+    const mobileImg = new window.Image();
+    mobileImg.src = PRODUCTS_HERO_MOBILE_BG;
   }, [router]);
 
   return (

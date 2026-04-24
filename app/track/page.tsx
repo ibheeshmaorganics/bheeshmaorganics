@@ -2,8 +2,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import styles from './page.module.css';
+import { getFriendlyNetworkMessage } from '@/lib/userFacingErrors';
 
 interface Order { _id: string; shortOrderId?: string; status: string; totalAmount: number; createdAt: string; awbCode?: string; courierName?: string; trackingLink?: string; customerName: string; phone: string; email: string; paymentMethod: string; paymentStatus?: string; paymentId?: string; refundId?: string; refundStatus?: string; refundFailureReason?: string; refundInitiatedAt?: string; refundCompletedAt?: string; refundTimeline?: any[]; transactionSummary?: any; address: any; products: any[]; }
 
@@ -413,13 +413,19 @@ function TrackContent() {
       setError('');
     }
     try {
-      const res = await fetch(`/api/orders/track?id=${encodeURIComponent(id)}`);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('offline');
+      }
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+      const res = await fetch(`/api/orders/track?id=${encodeURIComponent(id)}`, { signal: controller.signal });
+      window.clearTimeout(timeoutId);
       const contentType = res.headers.get("content-type");
       let data: { error?: string, orders?: Order[] } = {};
       if (contentType && contentType.includes("application/json")) {
         data = await res.json();
       } else {
-        throw new Error('Server returned an invalid response. Database might be unreachable.');
+        throw new Error('Server returned an invalid response.');
       }
       if (!res.ok) {
         throw new Error(data.error || 'Failed to fetch tracking data');
@@ -430,11 +436,11 @@ function TrackContent() {
       }
     } catch (err) {
       if (!options?.silent) {
-        if (err instanceof Error) {
+        if (err instanceof Error && err.message === 'No orders found for this Phone or Email.') {
           setError(err.message);
-        } else {
-          setError('Failed to fetch tracking data');
+          return;
         }
+        setError(getFriendlyNetworkMessage(err));
       }
     } finally {
       if (!options?.silent) {
@@ -515,7 +521,33 @@ function TrackContent() {
             </button>
           </form>
 
-          {error && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={styles.errorAlert}>{error}</motion.div>}
+          {error && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={styles.errorAlert}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'stretch', width: '100%' }}>
+                <span>{error}</span>
+                <button
+                  type="button"
+                  onClick={() => fetchOrders(query)}
+                  style={{
+                    border: 'none',
+                    background: '#0f766e',
+                    color: 'white',
+                    fontSize: '0.86rem',
+                    fontWeight: 700,
+                    minHeight: '42px',
+                    padding: '10px 16px',
+                    borderRadius: '999px',
+                    cursor: 'pointer',
+                    width: '100%',
+                    maxWidth: '220px',
+                    alignSelf: 'center'
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            </motion.div>
+          )}
 
           <div className={styles.results}>
             {orders.map((order, idx) => (

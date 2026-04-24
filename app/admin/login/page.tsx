@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { getFriendlyNetworkMessage } from '@/lib/userFacingErrors';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -44,9 +45,14 @@ export default function AdminLogin() {
       router.push('/admin');
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setError(err.message);
+        const msg = err.message.toLowerCase();
+        if (msg.includes('invalid') || msg.includes('login failed') || msg.includes('unauthorized') || msg.includes('password')) {
+          setError('Invalid username or password.');
+        } else {
+          setError(getFriendlyNetworkMessage(err));
+        }
       } else {
-        setError('Login failed');
+        setError(getFriendlyNetworkMessage(err));
       }
     } finally {
       setLoading(false);
