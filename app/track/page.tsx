@@ -478,6 +478,20 @@ function TrackContent() {
     };
   }, [query, orders.length]);
 
+  useEffect(() => {
+    const hasActiveSearch = query.trim().length > 0 || orders.length > 0;
+    if (!hasActiveSearch) return;
+
+    const clearTimer = window.setTimeout(() => {
+      setQuery('');
+      setOrders([]);
+      setError('');
+      router.replace('/track');
+    }, 5 * 60 * 1000);
+
+    return () => window.clearTimeout(clearTimer);
+  }, [query, orders.length, router]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchOrders(query);
