@@ -441,6 +441,54 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     }
   };
 
+  const getCustomerFacingOrderStatusText = (order: Order): string => {
+    const status = String(order.status || '').toUpperCase();
+    const paymentStatus = String(order.paymentStatus || '').toLowerCase().trim();
+    const refundStatus = String(order.refundStatus || '').toLowerCase().trim();
+
+    if (paymentStatus === 'refund failed') return 'Refund failed';
+    if (paymentStatus === 'refund initiated') return 'Refund initiated';
+    if (paymentStatus === 'refunded' && refundStatus === 'processed') return 'Refund processed';
+    if (paymentStatus === 'refunded') return 'Refunded';
+
+    if (status === 'NEW') return 'New';
+    if (status === 'CONFIRMED') return 'Confirmed';
+    if (status === 'READY_TO_SHIP') return 'Ready to Ship';
+    if (status === 'SHIPPED') return 'Shipped';
+    if (status === 'IN_TRANSIT') return 'In Transit';
+    if (status === 'DELIVERED') return 'Delivered';
+    if (status === 'RTO') return 'RTO';
+    if (status === 'CANCELLED') return 'Cancelled';
+    if (status === 'FAILED') return 'Failed';
+    if (status === 'PENDING_PAYMENT' || paymentStatus === 'pending' || paymentStatus === 'draft_intent') return 'Pending Payment';
+
+    return status ? status.replace(/_/g, ' ') : 'Processing';
+  };
+
+  const getCustomerStatusGuidance = (order: Order): string => {
+    const status = String(order.status || '').toUpperCase();
+    const paymentStatus = String(order.paymentStatus || '').toLowerCase().trim();
+    const refundStatus = String(order.refundStatus || '').toLowerCase().trim();
+
+    if (paymentStatus === 'refund failed') return 'Your refund attempt has failed. Our support team will assist you shortly.';
+    if (paymentStatus === 'refund initiated') return 'Your refund has been initiated and is being processed by the payment partner.';
+    if (paymentStatus === 'refunded' && refundStatus === 'processed') return 'Your refund is processed successfully.';
+    if (paymentStatus === 'refunded') return 'Your refund is completed.';
+
+    if (status === 'NEW') return 'Your order is placed and waiting for confirmation.';
+    if (status === 'CONFIRMED') return 'Your order is confirmed and preparation is in progress.';
+    if (status === 'READY_TO_SHIP') return 'Your package is packed and ready to ship.';
+    if (status === 'SHIPPED') return 'Your order has been shipped from our warehouse.';
+    if (status === 'IN_TRANSIT') return 'Your package is currently in transit.';
+    if (status === 'DELIVERED') return 'Your order has been delivered successfully.';
+    if (status === 'RTO') return 'Your order has been marked as Return to Origin (RTO).';
+    if (status === 'CANCELLED') return 'Your order has been cancelled.';
+    if (status === 'FAILED') return 'Your order could not be processed successfully.';
+    if (status === 'PENDING_PAYMENT' || paymentStatus === 'pending' || paymentStatus === 'draft_intent') return 'Your order is waiting for payment completion.';
+
+    return 'Your order is being processed.';
+  };
+
   const sendOrderConfirmationToCustomer = (order: Order) => {
     const phoneDigits = (order.phone || '').replace(/\D/g, '');
     if (!phoneDigits || phoneDigits.length < 10) {
@@ -462,19 +510,37 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
     const address = order.address && typeof order.address === 'object'
       ? [order.address.street, order.address.city, order.address.state, order.address.pinCode].filter(Boolean).join(', ')
       : '';
+    const customerStatus = getCustomerFacingOrderStatusText(order);
+    const statusGuidance = getCustomerStatusGuidance(order);
+    const orderStatusUpper = String(order.status || '').toUpperCase();
+    const paymentStatusLabel = String(order.paymentStatus || 'pending').replace(/_/g, ' ');
+    const fulfillmentStatusLabel = orderStatusUpper ? orderStatusUpper.replace(/_/g, ' ') : 'PROCESSING';
+    const cancellationOrRtoPaymentLine =
+      (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'RTO')
+        ? `Payment Information: Method - ${order.paymentMethod || 'N/A'}, Status - ${paymentStatusLabel}`
+        : '';
+    const cancellationOrRtoFulfillmentLine =
+      (orderStatusUpper === 'CANCELLED' || orderStatusUpper === 'RTO')
+        ? `Fulfillment Status: ${fulfillmentStatusLabel}${order.awbCode ? ` (AWB: ${order.awbCode})` : ''}${order.courierName ? ` via ${order.courierName}` : ''}`
+        : '';
     const message = [
       `Hi ${order.customerName},`,
       '',
-      `This is Bheeshma Organics confirming your order ${formatOrderDisplayId(order)}.`,
+      `This is Bheeshma Organics with an update on your order ${formatOrderDisplayId(order)}.`,
       '',
       'Order details:',
       items || '- Product details unavailable',
+      '',
+      `Current Status: ${customerStatus}`,
+      statusGuidance,
+      cancellationOrRtoPaymentLine,
+      cancellationOrRtoFulfillmentLine,
       '',
       `Total: ₹${order.totalAmount}`,
       `Payment: ${order.paymentMethod || 'N/A'}`,
       address ? `Delivery Address: ${address}` : '',
       '',
-      'Please reply YES to confirm this order or share any corrections.',
+      'For any questions, please reply to this message.',
       '',
       'Thank you!'
     ].filter(Boolean).join('\n');
@@ -960,15 +1026,13 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
                       <h3 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 800, color: '#1e293b' }}>Edit Order: {formatOrderDisplayId(editingOrder)}</h3>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {(editingOrder.status || '').toUpperCase() === 'NEW' && (
-                          <button
-                            type="button"
-                            onClick={() => sendOrderConfirmationToCustomer(editingOrder)}
-                            style={{ color: '#166534', background: '#f0fdf4', border: '1px solid #86efac', padding: '6px 12px', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
-                          >
-                            Send Confirmation
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => sendOrderConfirmationToCustomer(editingOrder)}
+                          style={{ color: '#166534', background: '#f0fdf4', border: '1px solid #86efac', padding: '6px 12px', borderRadius: '6px', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}
+                        >
+                          Send Confirmation
+                        </button>
                         <button onClick={handleCloseOrderEditor} style={{ color: '#1e293b', background: '#e2e8f0', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 600 }}>Back</button>
                       </div>
                     </div>
@@ -1671,15 +1735,13 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                                   </td>
                                   <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>
                                       <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
-                                        {(o.status || '').toUpperCase() === 'NEW' && (
-                                          <button
-                                            type="button"
-                                            style={{ padding: '6px 10px', fontSize: '0.62rem', whiteSpace: 'nowrap', borderRadius: '8px', border: '1px solid #86efac', background: '#f0fdf4', color: '#166534', fontWeight: 700, cursor: 'pointer' }}
-                                            onClick={() => sendOrderConfirmationToCustomer(o)}
-                                          >
-                                            Send Confirmation
-                                          </button>
-                                        )}
+                                        <button
+                                          type="button"
+                                          style={{ padding: '6px 10px', fontSize: '0.62rem', whiteSpace: 'nowrap', borderRadius: '8px', border: '1px solid #86efac', background: '#f0fdf4', color: '#166534', fontWeight: 700, cursor: 'pointer' }}
+                                          onClick={() => sendOrderConfirmationToCustomer(o)}
+                                        >
+                                          Send Confirmation
+                                        </button>
                                         <button className={styles.adminWhiteBtn} style={{ padding: '6px 14px', fontSize: '0.65rem', whiteSpace: 'nowrap', pointerEvents: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#334155' }} onClick={() => { setEditingOrder(o); setOrderEditSnapshot(getEditableOrderSnapshot(o)); setIsEditingOrder(true); }}>
                                           Manage <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                                         </button>
@@ -2066,14 +2128,23 @@ export default function ClientAdminDashboard({ initialProducts, initialOrders, i
                               <div style={{ fontWeight: 600, color: '#1e293b', fontSize: '0.65rem' }}>{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
                             </td>
                             <td style={{ padding: '6px 10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>
-                              <button
-                                type="button"
-                                className={styles.adminWhiteBtn}
-                                style={{ padding: '6px 14px', fontSize: '0.65rem', whiteSpace: 'nowrap', fontWeight: 700, color: '#334155' }}
-                                onClick={() => openOrderForRefund(o)}
-                              >
-                                Open in Orders
-                              </button>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  style={{ padding: '6px 10px', fontSize: '0.62rem', whiteSpace: 'nowrap', borderRadius: '8px', border: '1px solid #86efac', background: '#f0fdf4', color: '#166534', fontWeight: 700, cursor: 'pointer' }}
+                                  onClick={() => sendOrderConfirmationToCustomer(o)}
+                                >
+                                  Send Confirmation
+                                </button>
+                                <button
+                                  type="button"
+                                  className={styles.adminWhiteBtn}
+                                  style={{ padding: '6px 14px', fontSize: '0.65rem', whiteSpace: 'nowrap', fontWeight: 700, color: '#334155' }}
+                                  onClick={() => openOrderForRefund(o)}
+                                >
+                                  Open in Orders
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           );
