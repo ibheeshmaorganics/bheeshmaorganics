@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './Navbar.module.css';
 import { readCart, getCartCount, CART_UPDATED_EVENT } from '@/lib/cart';
@@ -53,7 +54,15 @@ export default function Navbar() {
       <div className="container">
         <div className={styles.navContainer}>
           <Link href="/" className={styles.logo}>
-            Bheeshma <span className={styles.logoHighlight}>Organics</span>
+            <Image
+              src="/brand-logo.png"
+              alt="Bheeshma Organics"
+              width={220}
+              height={62}
+              className={styles.logoImage}
+              style={{ height: 'auto' }}
+              priority
+            />
           </Link>
           
           <nav className={styles.navLinks}>

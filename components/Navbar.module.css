@@ -25,10 +25,16 @@
 }
 
 .logo {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--color-text);
-  letter-spacing: -0.5px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.logoImage {
+  width: 220px;
+  height: auto;
+  display: block;
+  clip-path: inset(0 0 15% 0);
 }
 
 .logoHighlight {
@@ -114,9 +120,11 @@
   }
 
   .logo {
-    font-size: 1.38rem;
-    line-height: 1;
     white-space: nowrap;
+  }
+
+  .logoImage {
+    width: 170px;
   }
 
   .actionArea {

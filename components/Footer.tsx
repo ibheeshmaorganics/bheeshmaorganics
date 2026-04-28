@@ -1,3 +1,5 @@
+import Link from 'next/link';
+import Image from 'next/image';
 import styles from './Footer.module.css';
 
 export default function Footer() {
@@ -5,7 +7,16 @@ export default function Footer() {
     <footer className={styles.footer}>
       <div className={`container ${styles.footerContent}`}>
         <div className={styles.section}>
-          <h3 className={styles.brand}>Bheeshma Organics</h3>
+          <Link href="/" className={styles.brandLogoLink}>
+            <Image
+              src="/brand-logo.png"
+              alt="Bheeshma Organics"
+              width={280}
+              height={80}
+              className={styles.footerLogoImage}
+              style={{ height: 'auto' }}
+            />
+          </Link>
           <p className={styles.description}>
             India&apos;s Trusted Herbal & Sea Buckthorn Wellness Brand.
             Carefully Selected Herbs | Botanical Extracts | Himalayan Sea Buckthorn.

@@ -25,6 +25,19 @@
   font-weight: 700;
 }
 
+.brandLogoLink {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.footerLogoImage {
+  width: 280px;
+  height: auto;
+  display: block;
+  clip-path: inset(0 0 15% 0);
+}
+
 .description {
   color: var(--color-text-light);
   line-height: 1.6;
@@ -144,6 +157,10 @@
 }
 
 @media (max-width: 450px) {
+  .footerLogoImage {
+    width: 210px;
+  }
+
   .sideBySide {
     gap: 0.75rem;
   }
