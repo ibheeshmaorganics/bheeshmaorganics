@@ -19,14 +19,6 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const { cart, syncCart, refreshCartWithLatest } = useCart();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   useEffect(() => {
     // Aggressively pre-warm all product destination pages natively into background memory instantly 
@@ -241,7 +233,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                   const currentBasePrice = allVariants[vi].price;
                   const currentFinalPrice = getVariantPrice(currentBasePrice, p.discount);
                   const activeCartId = `${p._id}-${allVariants[vi].size}`;
-                  const actionControlHeight = isMobile ? '32px' : '44px';
+                  const actionControlHeight = '44px';
                   const actionBorderRadius = '10px';
 
                   return (
@@ -304,14 +296,14 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                             prefetch={true}
                             style={{
                               flex: '0 0 40%',
-                              height: isMobile ? '28px' : actionControlHeight,
+                              height: actionControlHeight,
                               background: 'transparent',
                               color: 'var(--color-primary)',
                               border: '2px solid var(--color-primary)',
-                              padding: isMobile ? '0 2px' : '0 8px',
+                              padding: '0 6px',
                               borderRadius: actionBorderRadius,
                               fontWeight: 700,
-                              fontSize: isMobile ? '0.88rem' : 'clamp(0.72rem, 2.75vw, 1rem)',
+                              fontSize: 'clamp(0.8rem, 2.75vw, 1rem)',
                               cursor: 'pointer',
                               transition: 'all 0.2s',
                               whiteSpace: 'normal',
