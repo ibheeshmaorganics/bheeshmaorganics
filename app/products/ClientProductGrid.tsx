@@ -19,8 +19,14 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const { cart, syncCart, refreshCartWithLatest } = useCart();
-  const desktopHeroBg = 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto/v1/images/shop_hero_bg';
-  const mobileHeroBg = 'https://res.cloudinary.com/dmqxeysfq/image/upload/f_auto,q_auto,c_fill,ar_9:16,g_auto/v1/images/shop_hero_bg';
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Aggressively pre-warm all product destination pages natively into background memory instantly 
@@ -126,63 +132,39 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
   };
 
   return (
-    <div style={{ minHeight: '80vh', background: 'linear-gradient(180deg, #F8FBF8 0%, #FFFFFF 100%)' }}>
-      <div style={{ 
-        color: 'white', 
-        padding: 'clamp(6rem, 10vw, 10rem) 1rem clamp(3rem, 4vw, 4rem) 1rem', 
-        textAlign: 'center', 
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '40vh'
-      }}>
-        <Image
-          src={desktopHeroBg}
-          alt="Shop Hero Background"
-          fill
-          sizes="100vw"
-          className="heroBgDesktop"
-          style={{ objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }}
-        />
-        <Image
-          src={mobileHeroBg}
-          alt="Shop Hero Background Mobile"
-          fill
-          sizes="100vw"
-          className="heroBgMobile"
-          style={{ objectFit: 'cover', zIndex: 0, pointerEvents: 'none' }}
-        />
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(16, 42, 28, 0.5)', zIndex: 1 }}></div>
-        <div
-          className="container"
-          style={{ position: 'relative', zIndex: 2 }}
-        >
-          <h1 style={{ fontSize: 'clamp(1.1rem, 5.5vw, 4rem)', fontWeight: 800, marginBottom: '1rem', color: 'white', letterSpacing: '-1px', textShadow: '0 2px 10px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>Premium Wellness Collection</h1>
-          <p style={{ fontSize: 'clamp(1.1rem, 2vw, 1.35rem)', color: 'rgba(255, 255, 255, 0.95)', maxWidth: '700px', margin: '0 auto', lineHeight: 1.6, textShadow: '0 1px 5px rgba(0,0,0,0.5)' }}>Carefully crafted from pure Himalayan sourcing and traditional medicinal wisdom to support your daily holistic health.</p>
-        </div>
-      </div>
-
-      <div className="container" style={{ padding: 'clamp(2rem, 5vw, 4rem) 1rem', maxWidth: '1300px' }}>
+    <div style={{ minHeight: '80vh', background: 'linear-gradient(135deg, #102A1C 0%, #295936 100%)', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(75, 174, 79, 0.15) 0%, rgba(255,255,255,0) 70%)', filter: 'blur(60px)', borderRadius: '50%' }}></div>
+      <div style={{ position: 'absolute', bottom: '-10%', right: '-10%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(255, 179, 0, 0.1) 0%, rgba(255,255,255,0) 70%)', filter: 'blur(60px)', borderRadius: '50%' }}></div>
+      <div className="container" style={{ padding: 'clamp(6.5rem, 10vw, 8rem) 1rem clamp(2rem, 5vw, 4rem) 1rem', maxWidth: '1300px', position: 'relative', zIndex: 10 }}>
         <style dangerouslySetInnerHTML={{ __html: `
           .responsiveGrid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.65rem;
           }
-          .heroBgDesktop { display: block; }
-          .heroBgMobile { display: none; }
           .productCard {
-            background: white;
+            background: #ffffff;
             border-radius: 14px;
             overflow: hidden;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
-            border: 1px solid rgba(75, 174, 79, 0.12);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.55);
             display: flex;
             flex-direction: column;
             min-width: 0;
             max-width: 100vw;
+            transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+          }
+          .productCard:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+            border-color: rgba(255, 255, 255, 0.85);
+          }
+          @media (hover: none), (pointer: coarse) {
+            .productCard:hover {
+              transform: none;
+              box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+              border-color: rgba(255, 255, 255, 0.55);
+            }
           }
           .productImageLink {
             display: flex;
@@ -197,6 +179,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
           .productContent {
             padding: 0.62rem;
             min-width: 0;
+            background: #ffffff;
           }
           .productActions {
             display: flex;
@@ -213,13 +196,12 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
             flex-wrap: wrap;
           }
           @media (max-width: 420px) {
-            .responsiveGrid { gap: 0.55rem; }
+            .responsiveGrid { gap: 0.88rem; }
             .productImageLink { height: 136px; }
             .productContent { padding: 0.55rem; }
           }
           @media (max-width: 768px) {
-            .heroBgDesktop { display: none; }
-            .heroBgMobile { display: block; }
+            .responsiveGrid { gap: 1.05rem; }
             .variantRow { display: none; }
           }
           @media (min-width: 640px) {
@@ -259,7 +241,8 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                   const currentBasePrice = allVariants[vi].price;
                   const currentFinalPrice = getVariantPrice(currentBasePrice, p.discount);
                   const activeCartId = `${p._id}-${allVariants[vi].size}`;
-                  const actionControlHeight = '44px';
+                  const actionControlHeight = isMobile ? '32px' : '44px';
+                  const actionBorderRadius = '10px';
 
                   return (
                     <>
@@ -320,15 +303,15 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                             href={`/products/${p._id}`}
                             prefetch={true}
                             style={{
-                              flex: 1,
-                              height: actionControlHeight,
+                              flex: '0 0 40%',
+                              height: isMobile ? '28px' : actionControlHeight,
                               background: 'transparent',
                               color: 'var(--color-primary)',
                               border: '2px solid var(--color-primary)',
-                              padding: '0',
-                              borderRadius: '30px',
+                              padding: isMobile ? '0 2px' : '0 8px',
+                              borderRadius: actionBorderRadius,
                               fontWeight: 700,
-                              fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)',
+                              fontSize: isMobile ? '0.88rem' : 'clamp(0.72rem, 2.75vw, 1rem)',
                               cursor: 'pointer',
                               transition: 'all 0.2s',
                               whiteSpace: 'normal',
@@ -342,10 +325,10 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                             onMouseOver={(e) => { e.currentTarget.style.background = 'var(--color-primary)'; e.currentTarget.style.color = 'white'; }}
                             onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--color-primary)'; }}
                           >
-                            View More
+                            Details
                           </Link>
 
-                          <div style={{ flex: 1.3, display: 'flex' }}>
+                          <div style={{ flex: '0 0 60%', display: 'flex' }}>
                             {(() => {
                               const cartItem = cart.find(c => c._id === activeCartId);
                               if (cartItem) {
@@ -354,7 +337,7 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                                     quantity={cartItem.quantity}
                                     onDecrement={() => updateQuantity(activeCartId, -1)}
                                     onIncrement={() => updateQuantity(activeCartId, 1)}
-                                    containerStyle={{ display: 'flex', alignItems: 'stretch', background: '#f1f5f9', borderRadius: 'var(--radius-full)', overflow: 'hidden', border: '2px solid #e2e8f0', width: '100%', justifyContent: 'space-between', height: actionControlHeight }}
+                                    containerStyle={{ display: 'flex', alignItems: 'stretch', background: '#f1f5f9', borderRadius: actionBorderRadius, overflow: 'hidden', border: '2px solid #e2e8f0', width: '100%', justifyContent: 'space-between', height: actionControlHeight }}
                                     decrementButtonStyle={{ padding: '0 clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none', height: '100%' }}
                                     incrementButtonStyle={{ padding: '0 clamp(0.4rem, 2vw, 0.8rem)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-tertiary)', color: 'white', fontWeight: 'bold', fontSize: 'clamp(0.9rem, 3vw, 1.2rem)', transition: 'background 0.2s', cursor: 'pointer', border: 'none', height: '100%' }}
                                     quantityStyle={{ fontWeight: 800, color: '#0f172a', textAlign: 'center', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)' }}
@@ -365,8 +348,8 @@ export default function ClientProductGrid({ products: initialProducts }: { produ
                                 <AddToCartButton
                                   inStock={p.inStock !== false}
                                   onAdd={() => handleAddToCart(p, vi)}
-                                  style={{ width: '100%', height: actionControlHeight, background: 'var(--color-tertiary)', color: 'white', border: '2px solid var(--color-tertiary)', padding: '0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'normal', lineHeight: 1.2 }}
-                                  outOfStockStyle={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '2px solid #e2e8f0', boxShadow: 'none', width: '100%', height: actionControlHeight, padding: '0', borderRadius: 'var(--radius-full)', fontWeight: 700, fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)', whiteSpace: 'normal', lineHeight: 1.2 }}
+                                  style={{ width: '100%', height: actionControlHeight, background: 'var(--color-tertiary)', color: 'white', border: '2px solid var(--color-tertiary)', padding: '0', borderRadius: actionBorderRadius, fontWeight: 700, fontSize: 'clamp(0.72rem, 2.75vw, 1rem)', cursor: 'pointer', transition: 'all 0.3s ease', whiteSpace: 'normal', lineHeight: 1.2 }}
+                                  outOfStockStyle={{ background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed', border: '2px solid #e2e8f0', boxShadow: 'none', width: '100%', height: actionControlHeight, padding: '0', borderRadius: actionBorderRadius, fontWeight: 700, fontSize: 'clamp(0.72rem, 2.75vw, 1rem)', whiteSpace: 'normal', lineHeight: 1.2 }}
                                 />
                               );
                             })()}
